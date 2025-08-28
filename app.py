@@ -122,6 +122,31 @@ Your JSON output:
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/punctuate', methods=['POST'])
+def punctuate():
+    """
+    Adds punctuation to a raw text string using Groq AI.
+    """
+    raw_text = request.json.get('text')
+    if not raw_text:
+        return jsonify({"error": "No text provided"}), 400
+
+    try:
+        system_prompt = "You are a helpful assistant. Add appropriate Japanese punctuation (like 、 and 。) to the following text. Do not change the words. Only return the punctuated text, with no other explanations or surrounding text."
+
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": raw_text}
+            ],
+            model="openai/gpt-oss-120b",
+        )
+        punctuated_text = chat_completion.choices[0].message.content
+        return jsonify({"punctuated_text": punctuated_text})
+
+    except Exception as e:
+        return jsonify({"error": f"Error during punctuation: {str(e)}"}), 500
+
 @app.route('/synthesize-speech', methods=['POST'])
 def synthesize_speech():
     """

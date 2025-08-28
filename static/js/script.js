@@ -40,17 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        recognition.onend = () => {
+        recognition.onend = async () => { // Make async to await punctuation
             if (isRecording) {
                 isRecording = false;
                 recordButton.textContent = '🎤 録音開始';
                 recordButton.classList.remove('is-recording');
-                const userAnswer = finalTranscript.trim();
-                if (userAnswer) {
-                    addMessageToConversation('user', userAnswer);
-                    messages.push({ role: 'user', content: userAnswer });
+                const rawUserAnswer = finalTranscript.trim();
+
+                if (rawUserAnswer) {
+                    // Punctuate the text before processing
+                    const punctuatedAnswer = await punctuateText(rawUserAnswer);
+
+                    addMessageToConversation('user', punctuatedAnswer);
+                    messages.push({ role: 'user', content: punctuatedAnswer });
                     getAiResponse();
-                    getEvaluation(lastAiQuestion, userAnswer);
+                    getEvaluation(lastAiQuestion, punctuatedAnswer);
                 }
                 finalTranscript = "";
             }
@@ -134,6 +138,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         conversationArea.appendChild(messageElement);
         conversationArea.scrollTop = conversationArea.scrollHeight;
+    }
+
+    async function punctuateText(text) {
+        if (!text) return "";
+        try {
+            const response = await fetch('/punctuate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text }),
+            });
+            if (!response.ok) {
+                console.error("Punctuation failed, returning raw text.");
+                return text; // Fallback to raw text
+            }
+            const data = await response.json();
+            return data.punctuated_text || text;
+        } catch (error) {
+            console.error("Error punctuating text:", error);
+            return text; // Fallback to raw text on error
+        }
     }
 
     async function playAiAudio(text, button) {
