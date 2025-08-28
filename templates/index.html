@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本語会話チューター (Japanese Speaking Tutor)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <div class="container">
+        <h1>日本語会話チューター</h1>
+        <p>AIと日本語で会話して、スピーキングを練習しましょう。</p>
+
+        <div id="conversation-area">
+            <!-- Messages will be appended here -->
+            <div class="message ai-message">
+                <p class="speaker">AI:</p>
+                <div class="text-content" id="ai-text">
+                    <!-- AI's furigana text will go here -->
+                    <ruby>今日<rt>きょう</rt></ruby>は<ruby>天気<rt>てんき</rt></ruby>がいいですね。
+                </div>
+                <button id="play-button" disabled>▶️ 再生</button>
+            </div>
+        </div>
+
+        <div id="user-controls">
+            <button id="record-button">🎤 録音開始</button>
+        </div>
+
+        <div id="evaluation-area">
+            <h2>評価 (Evaluation)</h2>
+            <div id="score-section">
+                <strong>スコア:</strong> <span id="score-value">N/A</span>
+            </div>
+            <div id="suggestions-section">
+                <strong>改善提案:</strong>
+                <p id="suggestions-text">ここに改善のためのアドバイスが表示されます。</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
