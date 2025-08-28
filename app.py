@@ -117,7 +117,11 @@ def synthesize_speech():
         return jsonify({"error": "No text provided"}), 400
 
     try:
-        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable not set or empty.")
+
+        client = genai.Client(api_key=api_key)
         model = "gemini-2.5-flash-preview-tts"
         contents = [
             types.Content(
@@ -139,7 +143,6 @@ def synthesize_speech():
         )
 
         audio_buffer = BytesIO()
-        # Using the structure from the user's reference code
         for chunk in client.models.generate_content_stream(
             model=model,
             contents=contents,
@@ -152,9 +155,9 @@ def synthesize_speech():
 
         raw_audio_data = audio_buffer.getvalue()
         if not raw_audio_data:
-            return jsonify({"error": "No audio data received from API."}), 500
+            # This could happen if the request is bad (e.g., invalid voice name)
+            return jsonify({"error": "No audio data received from API. Check parameters like voice_name."}), 500
 
-        # The API returns raw audio, so we package it into a WAV file.
         wav_data = convert_to_wav(raw_audio_data, "audio/L16;rate=24000")
         wav_buffer = BytesIO(wav_data)
         wav_buffer.seek(0)
@@ -162,7 +165,9 @@ def synthesize_speech():
         return send_file(wav_buffer, mimetype='audio/wav')
 
     except Exception as e:
-        return jsonify({"error": f"Error during Gemini TTS synthesis: {str(e)}"}), 500
+        # Log the full error to the console for debugging
+        print(f"An exception occurred in synthesize_speech: {e}")
+        return jsonify({"error": f"An internal error occurred: {str(e)}"}), 500
 
 
 def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
