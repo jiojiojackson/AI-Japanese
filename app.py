@@ -44,22 +44,37 @@ def create_furigana_html(text):
 @app.route('/chat', methods=['POST'])
 def chat():
     """
-    Handles the chat request from the user, gets a response from Groq.
+    Handles the chat request from the user, gets a response from Groq,
+    and then cleans the response with a second Groq call.
     """
     messages = request.json.get('messages')
     if not messages:
         return jsonify({"error": "No messages provided"}), 400
 
     try:
-        chat_completion = groq_client.chat.completions.create(
+        # Step 1: Get the initial conversational response
+        initial_completion = groq_client.chat.completions.create(
             messages=messages,
             model="openai/gpt-oss-120b",
         )
-        ai_text = chat_completion.choices[0].message.content
+        raw_ai_text = initial_completion.choices[0].message.content
 
+        # Step 2: Clean the response using a second AI call
+        cleanup_prompt = "You are a text cleanup assistant. Reformat the following text into a simple, natural paragraph of Japanese. Remove any markdown formatting (like `**`, `*`, `1.`, `-`), fix any repeated or incorrect punctuation, and ensure it reads like a natural spoken response. Do not add any new information or change the meaning. Output only the cleaned text."
+
+        cleanup_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": cleanup_prompt},
+                {"role": "user", "content": raw_ai_text}
+            ],
+            model="openai/gpt-oss-120b",
+        )
+        cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
+
+        # Step 3: Use the cleaned text for furigana and response
         response_data = {
-            "text": ai_text,
-            "furigana_html": create_furigana_html(ai_text)
+            "text": cleaned_ai_text,
+            "furigana_html": create_furigana_html(cleaned_ai_text)
         }
         return jsonify(response_data)
 
