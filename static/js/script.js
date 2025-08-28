@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.lang = 'ja-JP';
-        recognition.continuous = true; // Keep listening
-        recognition.interimResults = true; // Get interim results
+        recognition.continuous = true;
+        recognition.interimResults = true;
 
         recognition.onresult = (event) => {
             let interimTranscript = '';
@@ -36,13 +36,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     interimTranscript += event.results[i][0].transcript;
                 }
             }
-            console.log("Interim: ", interimTranscript);
-            console.log("Final: ", finalTranscript);
+        };
+
+        recognition.onend = () => {
+            console.log("Recognition service ended.");
+            if (isRecording) { // Only process if it was a user-initiated stop
+                isRecording = false;
+                recordButton.textContent = '🎤 録音開始';
+                recordButton.classList.remove('is-recording');
+
+                const userAnswer = finalTranscript.trim();
+                if (userAnswer) {
+                    console.log('Processing final answer on "end" event: ' + userAnswer);
+                    addMessageToConversation('user', userAnswer);
+                    messages.push({ role: 'user', content: userAnswer });
+                    getAiResponse();
+                    getEvaluation(lastAiQuestion, userAnswer);
+                }
+                finalTranscript = ""; // Reset for next turn
+            }
         };
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
-            if(isRecording) stopRecording();
+            isRecording = false; // Reset state on error
+            recordButton.textContent = '🎤 録音開始';
+            recordButton.classList.remove('is-recording');
         };
 
     } else {
@@ -63,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Functions ---
     function startRecording() {
         if (recognition && !isRecording) {
+            finalTranscript = ""; // Clear stale transcript before starting
             isRecording = true;
             recognition.start();
             recordButton.textContent = '⏹️ 録音停止';
@@ -73,25 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopRecording() {
         if (recognition && isRecording) {
-            isRecording = false;
-            recognition.stop(); // Stop the service
-            recordButton.textContent = '🎤 録音開始';
-            recordButton.classList.remove('is-recording');
-            console.log("Recording stopped by user.");
-
-            // NOW we process the stored transcript
-            if (finalTranscript) {
-                const userAnswer = finalTranscript.trim();
-                console.log('Processing final user answer: ' + userAnswer);
-                addMessageToConversation('user', userAnswer);
-                messages.push({ role: 'user', content: userAnswer });
-
-                getAiResponse();
-                getEvaluation(lastAiQuestion, userAnswer);
-            }
-
-            // Reset for the next turn
-            finalTranscript = "";
+            // Just stop the service. The `onend` event will handle the rest.
+            recognition.stop();
+            console.log("Stop button clicked. Waiting for 'onend' event...");
         }
     }
 
