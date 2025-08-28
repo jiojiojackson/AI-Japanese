@@ -17,24 +17,27 @@ document.addEventListener('DOMContentLoaded', () => {
     let recognition;
     let messages = []; // Array to store conversation history
     let lastAiQuestion = "";
+    let finalTranscript = ""; // To accumulate transcript
 
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.lang = 'ja-JP';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+        recognition.continuous = true; // Keep listening
+        recognition.interimResults = true; // Get interim results
 
         recognition.onresult = (event) => {
-            const userAnswer = event.results[0][0].transcript;
-            console.log('User answer received: ' + userAnswer);
-            addMessageToConversation('user', userAnswer);
-            messages.push({ role: 'user', content: userAnswer });
-
-            // Get AI response and evaluation simultaneously
-            getAiResponse();
-            getEvaluation(lastAiQuestion, userAnswer);
+            let interimTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            console.log("Interim: ", interimTranscript);
+            console.log("Final: ", finalTranscript);
         };
 
         recognition.onerror = (event) => {
@@ -71,10 +74,24 @@ document.addEventListener('DOMContentLoaded', () => {
     function stopRecording() {
         if (recognition && isRecording) {
             isRecording = false;
-            recognition.stop();
+            recognition.stop(); // Stop the service
             recordButton.textContent = '🎤 録音開始';
             recordButton.classList.remove('is-recording');
-            console.log("Recording stopped.");
+            console.log("Recording stopped by user.");
+
+            // NOW we process the stored transcript
+            if (finalTranscript) {
+                const userAnswer = finalTranscript.trim();
+                console.log('Processing final user answer: ' + userAnswer);
+                addMessageToConversation('user', userAnswer);
+                messages.push({ role: 'user', content: userAnswer });
+
+                getAiResponse();
+                getEvaluation(lastAiQuestion, userAnswer);
+            }
+
+            // Reset for the next turn
+            finalTranscript = "";
         }
     }
 
