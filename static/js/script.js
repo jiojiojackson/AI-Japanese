@@ -118,6 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
             playButton.textContent = '▶️ 再生';
             playButton.addEventListener('click', () => playAiAudio(text, playButton));
             messageElement.appendChild(playButton);
+            // Autoplay the audio when the message is added
+            playAiAudio(text, playButton);
         }
         conversationArea.appendChild(messageElement);
         conversationArea.scrollTop = conversationArea.scrollHeight;
