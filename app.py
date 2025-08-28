@@ -20,7 +20,6 @@ kks = kakasi()
 # In a real application, you would get the API key from a secure source
 # For this example, we'll use an environment variable
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 @app.route('/')
 def index():
@@ -118,8 +117,16 @@ def synthesize_speech():
         return jsonify({"error": "No text provided"}), 400
 
     try:
+        client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
         model = "gemini-2.5-flash-preview-tts"
-        contents = [types.Part.from_text(text)]
+        contents = [
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_text(text=text),
+                ],
+            ),
+        ]
         generate_content_config = types.GenerateContentConfig(
             response_modalities=["audio"],
             speech_config=types.SpeechConfig(
@@ -132,26 +139,23 @@ def synthesize_speech():
         )
 
         audio_buffer = BytesIO()
-        for chunk in genai.GenerativeModel(model).generate_content(
+        # Using the structure from the user's reference code
+        for chunk in client.models.generate_content_stream(
+            model=model,
             contents=contents,
-            generation_config=generate_content_config,
-            stream=True,
+            config=generate_content_config,
         ):
             if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
                 part = chunk.candidates[0].content.parts[0]
                 if part.inline_data and part.inline_data.data:
                     audio_buffer.write(part.inline_data.data)
 
-        # Get the raw audio data from the buffer
         raw_audio_data = audio_buffer.getvalue()
+        if not raw_audio_data:
+            return jsonify({"error": "No audio data received from API."}), 500
 
-        # Assume a default mime type if not provided, for WAV conversion
-        # This part is simplified as the API seems to provide raw audio directly
-        # The reference code's mime type parsing is complex and might not be needed if output is consistent.
-        # We will create a standard WAV file.
+        # The API returns raw audio, so we package it into a WAV file.
         wav_data = convert_to_wav(raw_audio_data, "audio/L16;rate=24000")
-
-        # Reset buffer for sending the file
         wav_buffer = BytesIO(wav_data)
         wav_buffer.seek(0)
 
