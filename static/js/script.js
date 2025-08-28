@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let messages = []; // Array to store conversation history
     let lastAiQuestion = "";
     let finalTranscript = ""; // To accumulate transcript
+    let audioCache = {}; // To cache generated audio
 
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -133,7 +134,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function playAiAudio(text, button) {
         if (!text) return;
+
+        // --- Cache Check ---
+        if (audioCache[text]) {
+            console.log("Playing from cache:", text);
+            const audio = new Audio(audioCache[text]);
+            button.disabled = true;
+            button.textContent = '🔊 再生中...';
+            audio.play();
+            audio.onended = () => {
+                button.disabled = false;
+                button.textContent = '▶️ 再生';
+            };
+            return;
+        }
+
+        // --- API Fetch (Cache Miss) ---
         try {
+            console.log("Fetching new audio from API:", text);
             const selectedVoice = voiceSelect.value;
             button.disabled = true;
             button.textContent = '🔊 再生中...';
@@ -146,12 +164,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
+
+            // Store in cache
+            audioCache[text] = audioUrl;
+
             const audio = new Audio(audioUrl);
             audio.play();
             audio.onended = () => {
                 button.disabled = false;
                 button.textContent = '▶️ 再生';
-                URL.revokeObjectURL(audioUrl);
             };
         } catch (error) {
             console.error('Error synthesizing speech:', error);
