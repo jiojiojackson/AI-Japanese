@@ -1,0 +1,120 @@
+body {
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    background-color: #f4f7f6;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 700px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+p {
+    line-height: 1.6;
+}
+
+#conversation-area {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e1e1e1;
+    padding: 15px;
+    margin-bottom: 20px;
+    background-color: #fafafa;
+}
+
+.message {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.ai-message {
+    background-color: #e9f5ff;
+    border-left: 4px solid #3498db;
+}
+
+.speaker {
+    font-weight: bold;
+    margin-bottom: 5px;
+    color: #2980b9;
+}
+
+.text-content ruby {
+    font-size: 1.2rem;
+}
+
+.text-content rt {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+#user-controls {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#record-button {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    font-size: 1rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#record-button:hover {
+    background-color: #c0392b;
+}
+
+#record-button.is-recording {
+    background-color: #27ae60;
+}
+
+#play-button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#play-button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+#evaluation-area {
+    background-color: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+#evaluation-area h2 {
+    margin-top: 0;
+    color: #34495e;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 5px;
+}
