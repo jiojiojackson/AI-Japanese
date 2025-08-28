@@ -39,10 +39,11 @@ To run this application on your local machine, follow these steps:
     pip install -r requirements.txt
     ```
 
-4.  **Set up your API key:**
-    Create a file named `.env` in the root of the project and add your Groq API key to it:
+4.  **Set up your API keys:**
+    Create a file named `.env` in the root of the project and add your API keys to it:
     ```
     GROQ_API_KEY=your_groq_api_key_here
+    GEMINI_API_KEY=your_gemini_api_key_here
     ```
 
 5.  **Run the application:**
@@ -64,9 +65,9 @@ This application is configured for easy deployment on [Vercel](https://vercel.co
     - Connect and select your Git repository.
 
 3.  **Configure Environment Variables:**
-    During the import process or in your Project Settings, add your Groq API key:
-    - **Name**: `GROQ_API_KEY`
-    - **Value**: `your_groq_api_key_here`
+    During the import process or in your Project Settings, add the following environment variables:
+    - **Name**: `GROQ_API_KEY`, **Value**: `your_groq_api_key_here`
+    - **Name**: `GEMINI_API_KEY`, **Value**: `your_gemini_api_key_here`
 
 4.  **Deploy:**
     Vercel will automatically use the `vercel.json` and `requirements.txt` files to build and deploy your application. Click the "Deploy" button to finish. You will receive a public URL for your live application.

@@ -2,10 +2,12 @@ import os
 import json
 from flask import Flask, request, jsonify, render_template, send_file
 from dotenv import load_dotenv
-from gtts import gTTS
+import struct
 from io import BytesIO
 from pykakasi import kakasi
 import groq
+from google import genai
+from google.genai import types
 
 # Load environment variables from .env file
 # Explicitly providing path to .env file to avoid search issues.
@@ -17,7 +19,8 @@ kks = kakasi()
 
 # In a real application, you would get the API key from a secure source
 # For this example, we'll use an environment variable
-client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
+groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 
 @app.route('/')
 def index():
@@ -48,7 +51,7 @@ def chat():
         return jsonify({"error": "No messages provided"}), 400
 
     try:
-        chat_completion = client.chat.completions.create(
+        chat_completion = groq_client.chat.completions.create(
             messages=messages,
             model="openai/gpt-oss-120b",
         )
@@ -89,7 +92,7 @@ def evaluate():
     """
 
     try:
-        chat_completion = client.chat.completions.create(
+        chat_completion = groq_client.chat.completions.create(
             model="openai/gpt-oss-120b",
             response_format={"type": "json_object"},
             messages=[
@@ -106,22 +109,95 @@ def evaluate():
 @app.route('/synthesize-speech', methods=['POST'])
 def synthesize_speech():
     """
-    Generates speech from text using gTTS and returns it as an audio file.
+    Generates speech from text using the Gemini TTS API and returns it as a WAV file.
     """
     text = request.json.get('text')
-    lang = request.json.get('lang', 'ja') # Default to Japanese
+    voice_name = request.json.get('voice_name', 'Zephyr') # Default voice
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
     try:
-        tts = gTTS(text=text, lang=lang)
-        mp3_fp = BytesIO()
-        tts.write_to_fp(mp3_fp)
-        mp3_fp.seek(0)
-        return send_file(mp3_fp, mimetype='audio/mpeg')
+        model = "gemini-2.5-flash-preview-tts"
+        contents = [types.Part.from_text(text)]
+        generate_content_config = types.GenerateContentConfig(
+            response_modalities=["audio"],
+            speech_config=types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=voice_name
+                    )
+                )
+            ),
+        )
+
+        audio_buffer = BytesIO()
+        for chunk in genai.GenerativeModel(model).generate_content(
+            contents=contents,
+            generation_config=generate_content_config,
+            stream=True,
+        ):
+            if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                part = chunk.candidates[0].content.parts[0]
+                if part.inline_data and part.inline_data.data:
+                    audio_buffer.write(part.inline_data.data)
+
+        # Get the raw audio data from the buffer
+        raw_audio_data = audio_buffer.getvalue()
+
+        # Assume a default mime type if not provided, for WAV conversion
+        # This part is simplified as the API seems to provide raw audio directly
+        # The reference code's mime type parsing is complex and might not be needed if output is consistent.
+        # We will create a standard WAV file.
+        wav_data = convert_to_wav(raw_audio_data, "audio/L16;rate=24000")
+
+        # Reset buffer for sending the file
+        wav_buffer = BytesIO(wav_data)
+        wav_buffer.seek(0)
+
+        return send_file(wav_buffer, mimetype='audio/wav')
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Error during Gemini TTS synthesis: {str(e)}"}), 500
+
+
+def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
+    """Generates a WAV file header for the given audio data and parameters."""
+    parameters = parse_audio_mime_type(mime_type)
+    bits_per_sample = parameters["bits_per_sample"]
+    sample_rate = parameters["rate"]
+    num_channels = 1
+    data_size = len(audio_data)
+    bytes_per_sample = bits_per_sample // 8
+    block_align = num_channels * bytes_per_sample
+    byte_rate = sample_rate * block_align
+    chunk_size = 36 + data_size
+
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF", b"WAVE", b"fmt ", 16, 1, num_channels, sample_rate,
+        byte_rate, block_align, bits_per_sample, b"data", data_size
+    )
+    return header + audio_data
+
+def parse_audio_mime_type(mime_type: str) -> dict[str, int | None]:
+    """Parses bits per sample and rate from an audio MIME type string."""
+    bits_per_sample = 16
+    rate = 24000
+    parts = mime_type.split(";")
+    for param in parts:
+        param = param.strip()
+        if param.lower().startswith("rate="):
+            try:
+                rate = int(param.split("=", 1)[1])
+            except (ValueError, IndexError):
+                pass
+        elif param.startswith("audio/L"):
+            try:
+                bits_per_sample = int(param.split("L", 1)[1])
+            except (ValueError, IndexError):
+                pass
+    return {"bits_per_sample": bits_per_sample, "rate": rate}
 
 
 if __name__ == '__main__':

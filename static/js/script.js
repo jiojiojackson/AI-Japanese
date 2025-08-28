@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const recordButton = document.getElementById('record-button');
     const conversationArea = document.getElementById('conversation-area');
+    const voiceSelect = document.getElementById('voice-select');
 
     // Initial AI message elements are templates, we'll create new ones
     const initialAiTextElement = document.getElementById('ai-text');
@@ -133,12 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
     async function playAiAudio(text, button) {
         if (!text) return;
         try {
+            const selectedVoice = voiceSelect.value;
             button.disabled = true;
             button.textContent = '🔊 再生中...';
             const response = await fetch('/synthesize-speech', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text }),
+                body: JSON.stringify({ text: text, voice_name: selectedVoice }),
             });
             if (!response.ok) throw new Error(`TTS HTTP error! status: ${response.status}`);
 
