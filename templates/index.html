@@ -12,6 +12,17 @@
         <h1>日本語会話チューター</h1>
         <p>AIと日本語で会話して、スピーキングを練習しましょう。</p>
 
+        <div class="settings-area">
+            <label for="voice-select">AIの音色:</label>
+            <select name="voices" id="voice-select">
+                <option value="Echo">Echo (Male)</option>
+                <option value="Juniper">Juniper (Female)</option>
+                <option value="Luna">Luna (Female 2)</option>
+                <option value="Starlight">Starlight (Male 2)</option>
+                <option value="Zephyr">Zephyr</option>
+            </select>
+        </div>
+
         <div id="conversation-area">
             <!-- Messages will be appended here -->
             <div class="message ai-message">
