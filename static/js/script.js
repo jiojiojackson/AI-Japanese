@@ -6,13 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ttsEngineSelect = document.getElementById('tts-engine-select');
     const geminiVoiceSettings = document.getElementById('gemini-voice-settings');
 
-    // Evaluation Area Elements
-    const scoreValueElement = document.getElementById('score-value');
-    const userResponseDisplay = document.getElementById('user-response-display');
-    const correctedSentenceDisplay = document.getElementById('corrected-sentence-display');
-    const explanationDisplay = document.getElementById('explanation-display');
-
-
     // --- State ---
     let isRecording = false;
     let recognition;
@@ -20,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastAiQuestion = "";
     let finalTranscript = "";
     let audioCache = {};
+    let messageIdCounter = 0;
 
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -40,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         };
 
-        recognition.onend = async () => { // Make async to await punctuation
+        recognition.onend = async () => {
             if (isRecording) {
                 isRecording = false;
                 recordButton.textContent = '🎤 録音開始';
@@ -48,13 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rawUserAnswer = finalTranscript.trim();
 
                 if (rawUserAnswer) {
-                    // Punctuate the text before processing
+                    const messageId = `user-message-${messageIdCounter++}`;
                     const punctuatedAnswer = await punctuateText(rawUserAnswer);
 
-                    addMessageToConversation('user', punctuatedAnswer);
+                    addMessageToConversation('user', punctuatedAnswer, null, messageId);
                     messages.push({ role: 'user', content: punctuatedAnswer });
                     getAiResponse();
-                    getEvaluation(lastAiQuestion, punctuatedAnswer);
+                    getEvaluation(lastAiQuestion, punctuatedAnswer, messageId);
                 }
                 finalTranscript = "";
             }
@@ -106,9 +100,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addMessageToConversation(sender, text, furiganaHTML = null) {
+    function addMessageToConversation(sender, text, furiganaHTML = null, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
+        if (messageId) {
+            messageElement.id = messageId;
+        }
+
         const speakerElement = document.createElement('p');
         speakerElement.classList.add('speaker');
         speakerElement.textContent = sender === 'ai' ? 'AI:' : 'あなた:';
@@ -116,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const textElement = document.createElement('div');
         textElement.classList.add('text-content');
+        if (messageId) {
+            textElement.id = `${messageId}-text`;
+        }
 
         if (sender === 'ai') {
             textElement.innerHTML = furiganaHTML;
@@ -149,14 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({ text: text }),
             });
             if (!response.ok) {
-                console.error("Punctuation failed, returning raw text.");
-                return text; // Fallback to raw text
+                return text;
             }
             const data = await response.json();
             return data.punctuated_text || text;
         } catch (error) {
             console.error("Error punctuating text:", error);
-            return text; // Fallback to raw text on error
+            return text;
         }
     }
 
@@ -226,13 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function getEvaluation(ai_question, user_answer) {
-        // Set loading state
-        scoreValueElement.textContent = '...';
-        userResponseDisplay.textContent = '評価中...';
-        correctedSentenceDisplay.textContent = '評価中...';
-        explanationDisplay.textContent = '評価中...';
-
+    async function getEvaluation(ai_question, user_answer, messageId) {
         try {
             const response = await fetch('/evaluate', {
                 method: 'POST',
@@ -242,16 +236,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            scoreValueElement.textContent = data.score;
-            userResponseDisplay.innerHTML = data.error_html; // Use innerHTML to render red spans
-            correctedSentenceDisplay.textContent = data.corrected_sentence;
-            explanationDisplay.textContent = data.explanation;
+            const messageElement = document.getElementById(messageId);
+            const textElement = document.getElementById(`${messageId}-text`);
+            if (messageElement && textElement) {
+                textElement.innerHTML = data.error_html;
 
+                const feedbackContainer = document.createElement('div');
+                feedbackContainer.className = 'feedback-container';
+
+                feedbackContainer.innerHTML = `
+                    <div class="feedback-item"><strong>スコア:</strong> <span class="score">${data.score} / 10</span></div>
+                    <div class="feedback-item"><strong>自然な言い方:</strong> <span class="corrected-sentence">${data.corrected_sentence}</span></div>
+                    <div class="feedback-item"><strong>アドバイス:</strong> ${data.explanation}</div>
+                `;
+                messageElement.appendChild(feedbackContainer);
+            }
         } catch (error) {
             console.error('Error getting evaluation:', error);
-            userResponseDisplay.textContent = '評価の取得中にエラーが発生しました。';
-            correctedSentenceDisplay.textContent = '-';
-            explanationDisplay.textContent = '-';
         }
     }
 
