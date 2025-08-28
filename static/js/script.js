@@ -37,10 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
             getEvaluation(lastAiQuestion, userAnswer);
         };
 
-        recognition.onspeechend = () => {
-            if(isRecording) stopRecording();
-        };
-
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
             if(isRecording) stopRecording();
