@@ -184,7 +184,7 @@ def convert_to_wav(audio_data: bytes, mime_type: str) -> bytes:
 
     header = struct.pack(
         "<4sI4s4sIHHIIHH4sI",
-        b"RIFF", b"WAVE", b"fmt ", 16, 1, num_channels, sample_rate,
+        b"RIFF", chunk_size, b"WAVE", b"fmt ", 16, 1, num_channels, sample_rate,
         byte_rate, block_align, bits_per_sample, b"data", data_size
     )
     return header + audio_data
