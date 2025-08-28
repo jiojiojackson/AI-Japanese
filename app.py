@@ -8,7 +8,9 @@ from pykakasi import kakasi
 import groq
 
 # Load environment variables from .env file
-load_dotenv()
+# Explicitly providing path to .env file to avoid search issues.
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path=dotenv_path)
 
 app = Flask(__name__)
 kks = kakasi()
@@ -48,7 +50,7 @@ def chat():
     try:
         chat_completion = client.chat.completions.create(
             messages=messages,
-            model="llama3-8b-8192",
+            model="openai/gpt-oss-120b",
         )
         ai_text = chat_completion.choices[0].message.content
 
@@ -88,7 +90,7 @@ def evaluate():
 
     try:
         chat_completion = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="openai/gpt-oss-120b",
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
