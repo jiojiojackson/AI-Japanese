@@ -12,11 +12,21 @@
         <h1>日本語会話チューター</h1>
         <p>AIと日本語で会話して、スピーキングを練習しましょう。</p>
 
-        <div class="settings-area">
-            <label for="voice-select">AIの音色:</label>
-            <select name="voices" id="voice-select">
-                <option value="zephyr">Zephyr</option>
-                <option value="achernar">Achernar</option>
+        <div class="settings-container">
+            <div class="settings-area">
+                <label for="tts-engine-select">声のエンジン:</label>
+                <div id="tts-engine-select">
+                    <input type="radio" id="engine-gemini" name="tts-engine" value="gemini" checked>
+                    <label for="engine-gemini">高品質 (Gemini)</label>
+                    <input type="radio" id="engine-gtts" name="tts-engine" value="gtts">
+                    <label for="engine-gtts">標準 (gTTS)</label>
+                </div>
+            </div>
+            <div class="settings-area" id="gemini-voice-settings">
+                <label for="voice-select">AIの音色 (Gemini):</label>
+                <select name="voices" id="voice-select">
+                    <option value="zephyr">Zephyr</option>
+                    <option value="achernar">Achernar</option>
                 <option value="algenib">Algenib</option>
                 <option value="gacrux">Gacrux</option>
                 <option value="kore">Kore</option>

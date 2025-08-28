@@ -1,25 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM fully loaded and parsed. Script is running.");
-
     // --- DOM Elements ---
     const recordButton = document.getElementById('record-button');
     const conversationArea = document.getElementById('conversation-area');
     const voiceSelect = document.getElementById('voice-select');
-
-    // Initial AI message elements are templates, we'll create new ones
-    const initialAiTextElement = document.getElementById('ai-text');
-    const initialPlayButton = document.getElementById('play-button');
-
+    const ttsEngineSelect = document.getElementById('tts-engine-select');
+    const geminiVoiceSettings = document.getElementById('gemini-voice-settings');
     const scoreValueElement = document.getElementById('score-value');
     const suggestionsTextElement = document.getElementById('suggestions-text');
 
     // --- State ---
     let isRecording = false;
     let recognition;
-    let messages = []; // Array to store conversation history
+    let messages = [];
     let lastAiQuestion = "";
-    let finalTranscript = ""; // To accumulate transcript
-    let audioCache = {}; // To cache generated audio
+    let finalTranscript = "";
+    let audioCache = {};
 
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -41,31 +36,27 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         recognition.onend = () => {
-            console.log("Recognition service ended.");
-            if (isRecording) { // Only process if it was a user-initiated stop
+            if (isRecording) {
                 isRecording = false;
                 recordButton.textContent = '🎤 録音開始';
                 recordButton.classList.remove('is-recording');
-
                 const userAnswer = finalTranscript.trim();
                 if (userAnswer) {
-                    console.log('Processing final answer on "end" event: ' + userAnswer);
                     addMessageToConversation('user', userAnswer);
                     messages.push({ role: 'user', content: userAnswer });
                     getAiResponse();
                     getEvaluation(lastAiQuestion, userAnswer);
                 }
-                finalTranscript = ""; // Reset for next turn
+                finalTranscript = "";
             }
         };
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
-            isRecording = false; // Reset state on error
+            isRecording = false;
             recordButton.textContent = '🎤 録音開始';
             recordButton.classList.remove('is-recording');
         };
-
     } else {
         console.error("Speech Recognition not supported.");
         recordButton.disabled = true;
@@ -81,64 +72,66 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    ttsEngineSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'gemini') {
+            geminiVoiceSettings.style.display = 'block';
+        } else {
+            geminiVoiceSettings.style.display = 'none';
+        }
+    });
+
     // --- Functions ---
     function startRecording() {
         if (recognition && !isRecording) {
-            finalTranscript = ""; // Clear stale transcript before starting
+            finalTranscript = "";
             isRecording = true;
             recognition.start();
             recordButton.textContent = '⏹️ 録音停止';
             recordButton.classList.add('is-recording');
-            console.log("Recording started...");
         }
     }
 
     function stopRecording() {
         if (recognition && isRecording) {
-            // Just stop the service. The `onend` event will handle the rest.
             recognition.stop();
-            console.log("Stop button clicked. Waiting for 'onend' event...");
         }
     }
 
     function addMessageToConversation(sender, text, furiganaHTML = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
-
         const speakerElement = document.createElement('p');
         speakerElement.classList.add('speaker');
         speakerElement.textContent = sender === 'ai' ? 'AI:' : 'あなた:';
         messageElement.appendChild(speakerElement);
-
         const textElement = document.createElement('div');
         textElement.classList.add('text-content');
-
         if (sender === 'ai' && furiganaHTML) {
             textElement.innerHTML = furiganaHTML;
-            lastAiQuestion = text; // Save the plain text for context
+            lastAiQuestion = text;
         } else {
             textElement.textContent = text;
         }
         messageElement.appendChild(textElement);
-
         if (sender === 'ai') {
             const playButton = document.createElement('button');
             playButton.textContent = '▶️ 再生';
             playButton.addEventListener('click', () => playAiAudio(text, playButton));
             messageElement.appendChild(playButton);
         }
-
         conversationArea.appendChild(messageElement);
-        conversationArea.scrollTop = conversationArea.scrollHeight; // Auto-scroll
+        conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
     async function playAiAudio(text, button) {
         if (!text) return;
 
-        // --- Cache Check ---
-        if (audioCache[text]) {
-            console.log("Playing from cache:", text);
-            const audio = new Audio(audioCache[text]);
+        const selectedEngine = document.querySelector('input[name="tts-engine"]:checked').value;
+        const selectedVoice = voiceSelect.value;
+        const cacheKey = `${selectedEngine}-${selectedVoice}-${text}`;
+
+        if (audioCache[cacheKey]) {
+            const audio = new Audio(audioCache[cacheKey]);
             button.disabled = true;
             button.textContent = '🔊 再生中...';
             audio.play();
@@ -149,25 +142,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // --- API Fetch (Cache Miss) ---
         try {
-            console.log("Fetching new audio from API:", text);
-            const selectedVoice = voiceSelect.value;
             button.disabled = true;
             button.textContent = '🔊 再生中...';
             const response = await fetch('/synthesize-speech', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, voice_name: selectedVoice }),
+                body: JSON.stringify({
+                    text: text,
+                    engine: selectedEngine,
+                    voice_name: selectedVoice
+                }),
             });
             if (!response.ok) throw new Error(`TTS HTTP error! status: ${response.status}`);
 
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
-
-            // Store in cache
-            audioCache[text] = audioUrl;
-
+            audioCache[cacheKey] = audioUrl;
             const audio = new Audio(audioUrl);
             audio.play();
             audio.onended = () => {
@@ -190,10 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
-
             messages.push({ role: 'assistant', content: data.text });
             addMessageToConversation('ai', data.text, data.furigana_html);
-
         } catch (error) {
             console.error('Error getting AI response:', error);
             addMessageToConversation('ai', 'すみません、エラーが発生しました。');
@@ -211,10 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
-
             scoreValueElement.textContent = `${data.score} / 10`;
             suggestionsTextElement.textContent = data.suggestions;
-
         } catch (error) {
             console.error('Error getting evaluation:', error);
             scoreValueElement.textContent = 'エラー';
@@ -223,7 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startConversation() {
-        // Clear initial placeholder message
         conversationArea.innerHTML = '';
         messages = [
             {

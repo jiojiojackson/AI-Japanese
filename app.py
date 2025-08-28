@@ -8,6 +8,7 @@ from pykakasi import kakasi
 import groq
 from google import genai
 from google.genai import types
+from gtts import gTTS
 
 # Load environment variables from .env file
 # Explicitly providing path to .env file to avoid search issues.
@@ -108,65 +109,61 @@ def evaluate():
 @app.route('/synthesize-speech', methods=['POST'])
 def synthesize_speech():
     """
-    Generates speech from text using the Gemini TTS API and returns it as a WAV file.
+    Generates speech from text using either Gemini or gTTS engine.
     """
     text = request.json.get('text')
-    voice_name = request.json.get('voice_name', 'Zephyr') # Default voice
+    engine = request.json.get('engine', 'gemini') # Default to gemini
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
     try:
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set or empty.")
+        if engine == 'gtts':
+            tts = gTTS(text=text, lang='ja')
+            mp3_fp = BytesIO()
+            tts.write_to_fp(mp3_fp)
+            mp3_fp.seek(0)
+            return send_file(mp3_fp, mimetype='audio/mpeg')
 
-        client = genai.Client(api_key=api_key)
-        model = "gemini-2.5-flash-preview-tts"
-        contents = [
-            types.Content(
-                role="user",
-                parts=[
-                    types.Part.from_text(text=text),
-                ],
-            ),
-        ]
-        generate_content_config = types.GenerateContentConfig(
-            response_modalities=["audio"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                        voice_name=voice_name
+        elif engine == 'gemini':
+            voice_name = request.json.get('voice_name', 'Zephyr')
+            api_key = os.environ.get("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("GEMINI_API_KEY environment variable not set or empty.")
+
+            client = genai.Client(api_key=api_key)
+            model = "gemini-2.5-flash-preview-tts"
+            contents = [types.Content(role="user", parts=[types.Part.from_text(text=text)])]
+            generate_content_config = types.GenerateContentConfig(
+                response_modalities=["audio"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
                     )
-                )
-            ),
-        )
+                ),
+            )
 
-        audio_buffer = BytesIO()
-        for chunk in client.models.generate_content_stream(
-            model=model,
-            contents=contents,
-            config=generate_content_config,
-        ):
-            if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
-                part = chunk.candidates[0].content.parts[0]
-                if part.inline_data and part.inline_data.data:
-                    audio_buffer.write(part.inline_data.data)
+            audio_buffer = BytesIO()
+            for chunk in client.models.generate_content_stream(model=model, contents=contents, config=generate_content_config):
+                if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                    part = chunk.candidates[0].content.parts[0]
+                    if part.inline_data and part.inline_data.data:
+                        audio_buffer.write(part.inline_data.data)
 
-        raw_audio_data = audio_buffer.getvalue()
-        if not raw_audio_data:
-            # This could happen if the request is bad (e.g., invalid voice name)
-            return jsonify({"error": "No audio data received from API. Check parameters like voice_name."}), 500
+            raw_audio_data = audio_buffer.getvalue()
+            if not raw_audio_data:
+                return jsonify({"error": "No audio data received from API. Check parameters."}), 500
 
-        wav_data = convert_to_wav(raw_audio_data, "audio/L16;rate=24000")
-        wav_buffer = BytesIO(wav_data)
-        wav_buffer.seek(0)
+            wav_data = convert_to_wav(raw_audio_data, "audio/L16;rate=24000")
+            wav_buffer = BytesIO(wav_data)
+            wav_buffer.seek(0)
+            return send_file(wav_buffer, mimetype='audio/wav')
 
-        return send_file(wav_buffer, mimetype='audio/wav')
+        else:
+            return jsonify({"error": "Invalid TTS engine specified"}), 400
 
     except Exception as e:
-        # Log the full error to the console for debugging
-        print(f"An exception occurred in synthesize_speech: {e}")
+        print(f"An exception occurred in synthesize_speech with engine {engine}: {e}")
         return jsonify({"error": f"An internal error occurred: {str(e)}"}), 500
 
 
