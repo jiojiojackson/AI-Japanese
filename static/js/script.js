@@ -104,15 +104,23 @@ document.addEventListener('DOMContentLoaded', () => {
         speakerElement.classList.add('speaker');
         speakerElement.textContent = sender === 'ai' ? 'AI:' : 'あなた:';
         messageElement.appendChild(speakerElement);
+
         const textElement = document.createElement('div');
         textElement.classList.add('text-content');
-        if (sender === 'ai' && furiganaHTML) {
+
+        if (sender === 'ai') {
             textElement.innerHTML = furiganaHTML;
             lastAiQuestion = text;
+            // Add hidden class and event listener to reveal text
+            textElement.classList.add('is-hidden');
+            textElement.addEventListener('click', () => {
+                textElement.classList.remove('is-hidden');
+            }, { once: true }); // The listener is removed after being called once
         } else {
             textElement.textContent = text;
         }
         messageElement.appendChild(textElement);
+
         if (sender === 'ai') {
             const playButton = document.createElement('button');
             playButton.textContent = '▶️ 再生';
