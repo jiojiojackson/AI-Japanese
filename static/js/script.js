@@ -5,8 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const voiceSelect = document.getElementById('voice-select');
     const ttsEngineSelect = document.getElementById('tts-engine-select');
     const geminiVoiceSettings = document.getElementById('gemini-voice-settings');
+
+    // Evaluation Area Elements
     const scoreValueElement = document.getElementById('score-value');
-    const suggestionsTextElement = document.getElementById('suggestions-text');
+    const userResponseDisplay = document.getElementById('user-response-display');
+    const correctedSentenceDisplay = document.getElementById('corrected-sentence-display');
+    const explanationDisplay = document.getElementById('explanation-display');
+
 
     // --- State ---
     let isRecording = false;
@@ -111,11 +116,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sender === 'ai') {
             textElement.innerHTML = furiganaHTML;
             lastAiQuestion = text;
-            // Add hidden class and event listener to reveal text
             textElement.classList.add('is-hidden');
             textElement.addEventListener('click', () => {
                 textElement.classList.remove('is-hidden');
-            }, { once: true }); // The listener is removed after being called once
+            }, { once: true });
         } else {
             textElement.textContent = text;
         }
@@ -126,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
             playButton.textContent = '▶️ 再生';
             playButton.addEventListener('click', () => playAiAudio(text, playButton));
             messageElement.appendChild(playButton);
-            // Autoplay the audio when the message is added
             playAiAudio(text, playButton);
         }
         conversationArea.appendChild(messageElement);
@@ -200,8 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function getEvaluation(ai_question, user_answer) {
-        scoreValueElement.textContent = '評価中...';
-        suggestionsTextElement.textContent = '評価中...';
+        // Set loading state
+        scoreValueElement.textContent = '...';
+        userResponseDisplay.textContent = '評価中...';
+        correctedSentenceDisplay.textContent = '評価中...';
+        explanationDisplay.textContent = '評価中...';
+
         try {
             const response = await fetch('/evaluate', {
                 method: 'POST',
@@ -210,12 +217,17 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
-            scoreValueElement.textContent = `${data.score} / 10`;
-            suggestionsTextElement.textContent = data.suggestions;
+
+            scoreValueElement.textContent = data.score;
+            userResponseDisplay.innerHTML = data.error_html; // Use innerHTML to render red spans
+            correctedSentenceDisplay.textContent = data.corrected_sentence;
+            explanationDisplay.textContent = data.explanation;
+
         } catch (error) {
             console.error('Error getting evaluation:', error);
-            scoreValueElement.textContent = 'エラー';
-            suggestionsTextElement.textContent = '評価の取得中にエラーが発生しました。';
+            userResponseDisplay.textContent = '評価の取得中にエラーが発生しました。';
+            correctedSentenceDisplay.textContent = '-';
+            explanationDisplay.textContent = '-';
         }
     }
 

@@ -53,12 +53,23 @@
 
         <div id="evaluation-area">
             <h2>評価 (Evaluation)</h2>
-            <div id="score-section">
-                <strong>スコア:</strong> <span id="score-value">N/A</span>
-            </div>
-            <div id="suggestions-section">
-                <strong>改善提案:</strong>
-                <p id="suggestions-text">ここに改善のためのアドバイスが表示されます。</p>
+            <div class="eval-grid">
+                <div class="eval-item">
+                    <strong>スコア:</strong>
+                    <p><span id="score-value">N/A</span> / 10</p>
+                </div>
+                <div class="eval-item eval-item-full">
+                    <strong>あなたの回答 (間違いの指摘):</strong>
+                    <p id="user-response-display">評価待ち...</p>
+                </div>
+                <div class="eval-item eval-item-full">
+                    <strong>自然な言い方:</strong>
+                    <p id="corrected-sentence-display">評価待ち...</p>
+                </div>
+                <div class="eval-item eval-item-full">
+                    <strong>アドバイス:</strong>
+                    <p id="explanation-display">評価待ち...</p>
+                </div>
             </div>
         </div>
 

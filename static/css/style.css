@@ -141,3 +141,31 @@ p {
     font-weight: bold;
     border-radius: 5px;
 }
+
+.error {
+    color: #D8000C;
+    background-color: #FFD2D2;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+.eval-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.eval-item strong {
+    color: #34495e;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.eval-item p {
+    margin: 0;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #e1e1e1;
+}
