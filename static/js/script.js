@@ -169,7 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 rubyElement.appendChild(rt);
 
                 // Add click listener for the word card
-                rubyElement.addEventListener('click', () => showWordCard(token, text));
+                rubyElement.addEventListener('click', (event) => {
+                    if (textElement.classList.contains('is-hidden')) {
+                        // If text is hidden, do nothing. The parent click will handle it.
+                        return;
+                    }
+                    event.stopPropagation(); // Stop the event from bubbling further
+                    showWordCard(token, text);
+                });
 
                 textElement.appendChild(rubyElement);
             });
