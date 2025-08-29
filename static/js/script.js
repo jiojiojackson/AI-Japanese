@@ -6,6 +6,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const ttsEngineSelect = document.getElementById('tts-engine-select');
     const geminiVoiceSettings = document.getElementById('gemini-voice-settings');
 
+    // Evaluation Area Elements (Now part of message bubbles)
+
     // --- State ---
     let isRecording = false;
     let recognition;
@@ -100,7 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addMessageToConversation(sender, text, furiganaHTML = null, messageId = null) {
+    function addMessageToConversation(sender, text, tokens = null, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
         if (messageId) {
@@ -119,8 +121,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (sender === 'ai') {
-            textElement.innerHTML = furiganaHTML;
             lastAiQuestion = text;
+            // Build the rich text display from tokens
+            tokens.forEach(token => {
+                const rubyElement = document.createElement('ruby');
+                rubyElement.classList.add('pos-token', `pos-${token.pos}`);
+
+                rubyElement.appendChild(document.createTextNode(token.word));
+
+                const rt = document.createElement('rt');
+                rt.textContent = token.furigana;
+                rubyElement.appendChild(rt);
+
+                textElement.appendChild(rubyElement);
+            });
+
             textElement.classList.add('is-hidden');
             textElement.addEventListener('click', () => {
                 textElement.classList.remove('is-hidden');
@@ -219,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             messages.push({ role: 'assistant', content: data.text });
-            addMessageToConversation('ai', data.text, data.furigana_html);
+            addMessageToConversation('ai', data.text, data.tokens);
         } catch (error) {
             console.error('Error getting AI response:', error);
             addMessageToConversation('ai', 'すみません、エラーが発生しました。');

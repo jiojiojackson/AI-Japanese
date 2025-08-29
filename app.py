@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify, render_template, send_file
 from dotenv import load_dotenv
 import struct
 from io import BytesIO
-from pykakasi import kakasi
+from janome.tokenizer import Tokenizer
 import groq
 from google import genai
 from google.genai import types
@@ -16,7 +16,7 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 app = Flask(__name__)
-kks = kakasi()
+tokenizer = Tokenizer()
 
 # In a real application, you would get the API key from a secure source
 # For this example, we'll use an environment variable
@@ -26,26 +26,28 @@ groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
 def index():
     return render_template('index.html')
 
-def create_furigana_html(text):
+def analyze_text_with_pos(text):
     """
-    Converts a Japanese string into HTML with <ruby> tags for furigana.
+    Tokenizes text, gets part-of-speech, and reading for each token using Janome.
     """
-    result = kks.convert(text)
-    html_parts = []
-    for item in result:
-        orig = item['orig']
-        hira = item['hira']
-        if orig != hira:
-            html_parts.append(f"<ruby>{orig}<rt>{hira}</rt></ruby>")
-        else:
-            html_parts.append(orig)
-    return "".join(html_parts)
+    tokens = []
+    for token in tokenizer.tokenize(text):
+        pos = token.part_of_speech.split(',')[0]
+        # Janome's reading can be Katakana, convert to Hiragana for furigana
+        # A more robust solution might be needed if readings are complex
+        reading = token.reading if token.reading != '*' else token.surface
+        tokens.append({
+            "word": token.surface,
+            "furigana": reading, # Note: Janome provides Katakana reading, might need conversion
+            "pos": pos
+        })
+    return tokens
 
 @app.route('/chat', methods=['POST'])
 def chat():
     """
     Handles the chat request from the user, gets a response from Groq,
-    and then cleans the response with a second Groq call.
+    and then analyzes it for part-of-speech tagging.
     """
     messages = request.json.get('messages')
     if not messages:
@@ -71,10 +73,12 @@ def chat():
         )
         cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
 
-        # Step 3: Use the cleaned text for furigana and response
+        # Step 3: Analyze the cleaned text for POS and furigana
+        analyzed_tokens = analyze_text_with_pos(cleaned_ai_text)
+
         response_data = {
             "text": cleaned_ai_text,
-            "furigana_html": create_furigana_html(cleaned_ai_text)
+            "tokens": analyzed_tokens
         }
         return jsonify(response_data)
 

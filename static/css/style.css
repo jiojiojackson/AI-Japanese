@@ -196,3 +196,25 @@ p {
     font-style: italic;
     color: #27ae60;
 }
+
+/* Part-of-Speech Coloring */
+.pos-token {
+    display: inline-block; /* Allows for padding and margin */
+    margin: 0 1px 2px 1px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1.8; /* Adjust line height for ruby text */
+}
+
+.pos-名詞 { background-color: #FFF3A3; } /* Noun - Yellow */
+.pos-動詞 { background-color: #A3F5B0; } /* Verb - Green */
+.pos-形容詞 { background-color: #A3D5F5; } /* Adjective - Blue */
+.pos-助詞 { background-color: #F5A3A3; } /* Particle - Red */
+.pos-助動詞 { background-color: #F5C4A3; } /* Auxiliary Verb - Orange */
+.pos-副詞 { background-color: #DDA3F5; } /* Adverb - Purple */
+.pos-接続詞 { background-color: #A3F5E1; } /* Conjunction - Teal */
+.pos-連体詞 { background-color: #F5A3D1; } /* Adnominal - Pink */
+.pos-感動詞 { background-color: #E1F5A3; } /* Interjection - Lime */
+.pos-記号 { background-color: #E0E0E0; } /* Symbol - Gray */
+.pos-フィラー { background-color: #E0E0E0; } /* Filler - Gray */
+.pos-その他 { background-color: #E0E0E0; } /* Other - Gray */
