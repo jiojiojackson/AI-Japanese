@@ -139,28 +139,38 @@ def explain_word():
         return jsonify({"error": "Word or sentence not provided"}), 400
 
     system_prompt = """
-You are a Japanese language teacher explaining a word to a Chinese-speaking student.
-Your entire response must be a single JSON object, with all string values in Chinese.
-The JSON object must have the following keys:
-1.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning and grammatical role in the given sentence.
-2.  `"meanings"`: An array of objects, where each object represents a distinct meaning of the word. Each object in this array must have:
-    a. `"definition"`: A string in Chinese for the definition of this meaning.
-    b. `"examples"`: An array of 1-2 example objects for this specific meaning. Each example object must have `"sentence"`, `"reading"`, and `"translation"` (in Chinese) keys.
+You are a Japanese language expert providing detailed data for a language learning app. A user has clicked on a word within a sentence.
+Your task is to return a single JSON object with no other text. All explanatory text must be in Chinese.
 
-Example JSON output structure:
+The JSON object must have the following keys:
+1.  `"pitch_accent"`: An integer representing the pitch accent pattern (e.g., 0 for heiban, 1 for atamadaka, etc.).
+2.  `"hiragana"`: A string of the word's reading in hiragana.
+3.  `"pos_details"`: An array of objects, where each object details a possible part of speech for the word. Each object should have:
+    - `"pos"`: The main part of speech (e.g., "名詞", "動詞").
+    - `"type"`: The sub-type (e.g., "サ変接続", "五段・ラ行").
+    - `"transitivity"`: (Only for verbs) The transitivity ("自動詞" or "他動詞").
+4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning and grammatical role in the given sentence.
+5.  `"meanings"`: An array of objects, where each object represents a distinct meaning of the word. Each object in this array must have:
+    - `"definition"`: A string in Chinese for the definition of this meaning.
+    - `"examples"`: An array of 1-2 example objects for this specific meaning. Each example object must have `"sentence"`, `"reading"`, and `"translation"` (in Chinese) keys.
+
+Example for a verb like "変わる":
 {
-  "contextual_explanation": "在当前句子中，'...'是...意思，作...使用。",
+  "pitch_accent": 0,
+  "hiragana": "かわる",
+  "pos_details": [
+    {
+      "pos": "動詞",
+      "type": "五段・ラ行",
+      "transitivity": "自動詞"
+    }
+  ],
+  "contextual_explanation": "在当前句子中, '変わる' 意为 '变化'。",
   "meanings": [
     {
-      "definition": "【意思1】这是第一个常见的中文意思。",
+      "definition": "【动词】变化，变更",
       "examples": [
-        { "sentence": "例文１", "reading": "れいぶん１", "translation": "中文翻译1" }
-      ]
-    },
-    {
-      "definition": "【意思2】这是第二个常见的中文意思。",
-      "examples": [
-        { "sentence": "例文２", "reading": "れいぶん２", "translation": "中文翻译2" }
+        {"sentence": "信号が青に変わる。", "reading": "しんごうがあおにかわる。", "translation": "信号灯变绿了。"}
       ]
     }
   ]

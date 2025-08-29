@@ -285,6 +285,52 @@ p {
     margin-top: 10px;
 }
 
+.word-card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+}
+
+#word-card-title {
+    margin: 0;
+}
+
+.pitch-accent {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #fff;
+    background-color: #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    margin-left: 10px;
+}
+
+.hiragana-reading {
+    font-size: 1rem;
+    color: #555;
+    margin-top: 5px;
+    margin-bottom: 15px;
+}
+
+.pos-details-container {
+    margin-bottom: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.pos-detail-item {
+    background-color: #ecf0f1;
+    color: #34495e;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
 /* Settings Modal Styles */
 .settings-btn {
     position: absolute;

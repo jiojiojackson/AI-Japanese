@@ -18,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const wordCardModal = document.getElementById('word-card-modal');
     const closeWordCardButton = document.getElementById('close-word-card-button');
     const wordCardTitle = document.getElementById('word-card-title');
+    const wordCardPitch = document.getElementById('word-card-pitch');
+    const wordCardHiragana = document.getElementById('word-card-hiragana');
+    const wordCardPosDetails = document.getElementById('word-card-pos-details');
     const wordCardPronounceButton = document.getElementById('word-card-pronounce-button');
     const wordCardContext = document.getElementById('word-card-context');
     const wordCardMeanings = document.getElementById('word-card-meanings');
@@ -201,8 +204,11 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showWordCard(token, sentence) {
         wordCardModal.classList.remove('is-hidden');
         wordCardTitle.textContent = token.word;
-        wordCardContext.textContent = '加载中...';
-        wordCardMeanings.innerHTML = '<li>加载中...</li>';
+        wordCardPitch.textContent = '';
+        wordCardHiragana.textContent = '読み込み中...';
+        wordCardPosDetails.innerHTML = '';
+        wordCardContext.textContent = '読み込み中...';
+        wordCardMeanings.innerHTML = '<li>読み込み中...</li>';
 
         currentWordToPronounce = token.word;
 
@@ -219,9 +225,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
+            // Populate new fields
+            wordCardPitch.textContent = data.pitch_accent;
+            wordCardHiragana.textContent = data.hiragana;
+            data.pos_details.forEach(pos => {
+                const posTag = document.createElement('span');
+                posTag.className = 'pos-detail-item';
+                posTag.textContent = `${pos.pos} (${pos.type}) ${pos.transitivity || ''}`.trim();
+                wordCardPosDetails.appendChild(posTag);
+            });
+
+            // Populate existing fields
             wordCardContext.textContent = data.contextual_explanation;
             wordCardMeanings.innerHTML = '';
-
             data.meanings.forEach(meaning => {
                 const meaningDiv = document.createElement('div');
                 meaningDiv.className = 'meaning-group';
