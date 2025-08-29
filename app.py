@@ -136,22 +136,23 @@ def explain_word():
     if not word or not sentence:
         return jsonify({"error": "Word or sentence not provided"}), 400
 
-    system_prompt = f"""
-You are a Japanese language teacher explaining a word to a student.
-The user clicked on the word "{word}" in the sentence "{sentence}".
-Provide a detailed explanation in a strict JSON format. The JSON object must have the following keys:
+    system_prompt = """
+You are a Japanese language teacher. A student has clicked on a word in a sentence and wants to understand it better.
+Provide a detailed explanation in a strict JSON format. Your entire response must be only the JSON object.
+The JSON object must have the following keys:
 1. "contextual_explanation": A string explaining the word's meaning and grammatical role specifically in the given sentence.
 2. "general_usage": A string describing the word's most common general meaning and usage.
 3. "examples": An array of 2-3 example objects, where each object has "sentence", "reading", and "translation" keys.
-
-Your entire response must be only the JSON object.
 """
+    user_prompt = f"Please explain the word '{word}' as it appears in the sentence: '{sentence}'"
+
     try:
         chat_completion = groq_client.chat.completions.create(
             model=model,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
             ]
         )
         explanation_data = json.loads(chat_completion.choices[0].message.content)
