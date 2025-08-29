@@ -199,22 +199,22 @@ p {
 
 /* Part-of-Speech Coloring */
 .pos-token {
-    display: inline-block; /* Allows for padding and margin */
-    margin: 0 1px 2px 1px;
-    padding: 2px 4px;
-    border-radius: 4px;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
     line-height: 1.8; /* Adjust line height for ruby text */
+    font-weight: bold;
 }
 
-.pos-名詞 { background-color: #FFF3A3; } /* Noun - Yellow */
-.pos-動詞 { background-color: #A3F5B0; } /* Verb - Green */
-.pos-形容詞 { background-color: #A3D5F5; } /* Adjective - Blue */
-.pos-助詞 { background-color: #F5A3A3; } /* Particle - Red */
-.pos-助動詞 { background-color: #F5C4A3; } /* Auxiliary Verb - Orange */
-.pos-副詞 { background-color: #DDA3F5; } /* Adverb - Purple */
-.pos-接続詞 { background-color: #A3F5E1; } /* Conjunction - Teal */
-.pos-連体詞 { background-color: #F5A3D1; } /* Adnominal - Pink */
-.pos-感動詞 { background-color: #E1F5A3; } /* Interjection - Lime */
-.pos-記号 { background-color: #E0E0E0; } /* Symbol - Gray */
-.pos-フィラー { background-color: #E0E0E0; } /* Filler - Gray */
-.pos-その他 { background-color: #E0E0E0; } /* Other - Gray */
+.pos-名詞 { color: #C4A200; } /* Noun - Gold */
+.pos-動詞 { color: #2E8B57; } /* Verb - SeaGreen */
+.pos-形容詞 { color: #4682B4; } /* Adjective - SteelBlue */
+.pos-助詞 { color: #C71585; } /* Particle - MediumVioletRed */
+.pos-助動詞 { color: #D2691E; } /* Auxiliary Verb - Chocolate */
+.pos-副詞 { color: #8A2BE2; } /* Adverb - BlueViolet */
+.pos-接続詞 { color: #008B8B; } /* Conjunction - DarkCyan */
+.pos-連体詞 { color: #FF69B4; } /* Adnominal - HotPink */
+.pos-感動詞 { color: #32CD32; } /* Interjection - LimeGreen */
+.pos-記号 { color: #778899; } /* Symbol - LightSlateGray */
+.pos-フィラー { color: #778899; } /* Filler - LightSlateGray */
+.pos-その他 { color: #778899; } /* Other - LightSlateGray */
