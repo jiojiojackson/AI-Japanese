@@ -64,27 +64,27 @@
             <div class="setting-item">
                 <label for="model-select-conversation">会話・分析モデル:</label>
                 <select id="model-select-conversation">
-                    <option value="openai/gpt-oss-120b">GPT-OSS-120b (Recommended)</option>
-                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
                     <option value="llama3-8b-8192">Llama3 8B</option>
-                    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
-                    <option value="gemma-7b-it">Gemma 7B</option>
                 </select>
             </div>
             <div class="setting-item">
                 <label for="model-select-evaluation">評価モデル:</label>
                 <select id="model-select-evaluation">
-                    <option value="openai/gpt-oss-120b">GPT-OSS-120b (Recommended)</option>
-                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b (Quality)</option>
                     <option value="llama3-70b-8192">Llama3 70B</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-explanation">単語解説モデル:</label>
+                <select id="model-select-explanation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b (Quality)</option>
                     <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
                 </select>
             </div>
             <div class="setting-item">
-                <label for="model-select-punctuation">句読点修正モデル:</label>
-                <select id="model-select-punctuation">
-                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
-                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                <label for="model-select-formatting">書式設定モデル (句読点):</label>
+                <select id="model-select-formatting">
                     <option value="llama3-8b-8192">Llama3 8B (Fast)</option>
                     <option value="gemma-7b-it">Gemma 7B</option>
                 </select>

@@ -7,9 +7,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const openSettingsButton = document.getElementById('open-settings-button');
     const closeSettingsButton = document.getElementById('close-settings-button');
     const settingsModal = document.getElementById('settings-modal');
-    const modelSelectConversation = document.getElementById('model-select-conversation');
-    const modelSelectEvaluation = document.getElementById('model-select-evaluation');
-    const modelSelectPunctuation = document.getElementById('model-select-punctuation');
+    const modelSelects = {
+        conversation: document.getElementById('model-select-conversation'),
+        evaluation: document.getElementById('model-select-evaluation'),
+        explanation: document.getElementById('model-select-explanation'),
+        formatting: document.getElementById('model-select-formatting'),
+    };
 
     // Word Card Modal Elements
     const wordCardModal = document.getElementById('word-card-modal');
@@ -35,27 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentWordToPronounce = '';
 
     // --- Settings Logic ---
-    const settingsMap = {
-        conversation: modelSelectConversation,
-        evaluation: modelSelectEvaluation,
-        punctuation: modelSelectPunctuation,
-    };
-
     function saveSettings() {
-        localStorage.setItem('settings-model-conversation', modelSelectConversation.value);
-        localStorage.setItem('settings-model-evaluation', modelSelectEvaluation.value);
-        localStorage.setItem('settings-model-punctuation', modelSelectPunctuation.value);
+        for (const key in modelSelects) {
+            localStorage.setItem(`settings-model-${key}`, modelSelects[key].value);
+        }
     }
 
     function loadSettings() {
-        modelSelectConversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
-        modelSelectEvaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
-        modelSelectPunctuation.value = localStorage.getItem('settings-model-punctuation') || 'llama3-8b-8192';
+        modelSelects.conversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
+        modelSelects.evaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
+        modelSelects.explanation.value = localStorage.getItem('settings-model-explanation') || 'openai/gpt-oss-120b';
+        modelSelects.formatting.value = localStorage.getItem('settings-model-formatting') || 'llama3-8b-8192';
         saveSettings();
     }
 
     function getModelFor(task) {
-        return settingsMap[task].value;
+        return modelSelects[task].value;
     }
 
     // --- Speech Recognition Setup ---
@@ -116,9 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    modelSelectConversation.addEventListener('change', saveSettings);
-    modelSelectEvaluation.addEventListener('change', saveSettings);
-    modelSelectPunctuation.addEventListener('change', saveSettings);
+    for (const key in modelSelects) {
+        modelSelects[key].addEventListener('change', saveSettings);
+    }
 
     recordButton.addEventListener('click', () => {
         if (isRecording) {
@@ -215,23 +213,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     word: token.word,
                     sentence: sentence,
-                    model: getModelFor('evaluation')
+                    model: getModelFor('explanation')
                 })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
             wordCardContext.textContent = data.contextual_explanation;
-            wordCardMeanings.innerHTML = ''; // Clear loading text
+            wordCardMeanings.innerHTML = '';
 
             data.meanings.forEach(meaning => {
                 const meaningDiv = document.createElement('div');
                 meaningDiv.className = 'meaning-group';
-
                 const definitionP = document.createElement('p');
                 definitionP.innerHTML = `<strong>${meaning.definition}</strong>`;
                 meaningDiv.appendChild(definitionP);
-
                 const exampleUl = document.createElement('ul');
                 meaning.examples.forEach(ex => {
                     const li = document.createElement('li');
@@ -254,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/punctuate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, model: getModelFor('punctuation') }),
+                body: JSON.stringify({ text: text, model: getModelFor('formatting') }),
             });
             if (!response.ok) return text;
             const data = await response.json();
