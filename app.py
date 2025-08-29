@@ -53,12 +53,49 @@ def chat():
 
         # Step 3: Perform POS tagging using a third AI call
         pos_prompt = """
-You are a Japanese linguistics expert. Analyze the user's text by performing morphological analysis.
-Return a JSON array of objects, where each object represents a token and has three keys: "word", "furigana", and "pos".
-- "word": The token itself (the word).
-- "furigana": The furigana reading in Katakana.
-- "pos": The primary part of speech (e.g., '名詞', '動詞', '助詞', '形容詞', '記号').
-Example JSON Output: [{"word": "この", "furigana": "コノ", "pos": "連体詞"}, {"word": "猫", "furigana": "ネコ", "pos": "名詞"}]
+You are a Japanese morphological analysis expert. Your task is to process a Japanese sentence and return a structured JSON object representing the analysis.
+The JSON object must be an array of "words". Each "word" object in the array contains the part-of-speech (`pos`) for the whole word, and a `word_tokens` array detailing its components.
+
+For each component token in `word_tokens`, you must provide:
+1. `surface`: The character(s) of the token.
+2. `is_kanji`: A boolean, `true` if the surface is Kanji, `false` otherwise.
+3. `reading`: If `is_kanji` is `true`, provide the contextually correct **Hiragana** reading. If `is_kanji` is `false`, this key can be omitted.
+
+The top-level `pos` should be the main part of speech for the entire word (e.g., '名詞', '動詞').
+
+Example Input: 「この食べ物は美味しい。」
+Example JSON Output:
+{
+  "result": [
+    {
+      "pos": "連体詞",
+      "word_tokens": [{"surface": "この", "is_kanji": false}]
+    },
+    {
+      "pos": "名詞",
+      "word_tokens": [
+        {"surface": "食", "is_kanji": true, "reading": "た"},
+        {"surface": "べ", "is_kanji": false},
+        {"surface": "物", "is_kanji": true, "reading": "もの"}
+      ]
+    },
+    {
+      "pos": "助詞",
+      "word_tokens": [{"surface": "は", "is_kanji": false}]
+    },
+    {
+      "pos": "形容詞",
+      "word_tokens": [
+        {"surface": "美味", "is_kanji": true, "reading": "おい"},
+        {"surface": "しい", "is_kanji": false}
+      ]
+    },
+    {
+      "pos": "記号",
+      "word_tokens": [{"surface": "。", "is_kanji": false}]
+    }
+  ]
+}
 """
         pos_completion = groq_client.chat.completions.create(
             messages=[
@@ -69,14 +106,8 @@ Example JSON Output: [{"word": "この", "furigana": "コノ", "pos": "連体詞
             response_format={"type": "json_object"},
         )
         pos_data = json.loads(pos_completion.choices[0].message.content)
-        analyzed_tokens = []
-        if isinstance(pos_data, list):
-            analyzed_tokens = pos_data
-        elif isinstance(pos_data, dict):
-            for value in pos_data.values():
-                if isinstance(value, list):
-                    analyzed_tokens = value
-                    break
+        # The new structure is nested under a "result" key in the example prompt.
+        analyzed_tokens = pos_data.get("result", [])
 
         if not analyzed_tokens:
              return jsonify({"text": cleaned_ai_text, "tokens": [{"word": cleaned_ai_text, "furigana": "", "pos": "その他"}]})

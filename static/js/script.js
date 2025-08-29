@@ -168,23 +168,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sender === 'ai') {
             lastAiQuestion = text;
-            tokens.forEach(token => {
-                const rubyElement = document.createElement('ruby');
-                rubyElement.classList.add('pos-token', `pos-${token.pos}`);
-                rubyElement.style.cursor = 'pointer';
-                rubyElement.appendChild(document.createTextNode(token.word));
-                const rt = document.createElement('rt');
-                rt.textContent = token.furigana;
-                rubyElement.appendChild(rt);
+            // Build the rich text display from the new nested token structure
+            tokens.forEach(word => {
+                const wordSpan = document.createElement('span');
+                wordSpan.classList.add('pos-token', `pos-${word.pos}`);
 
-                rubyElement.addEventListener('click', (event) => {
-                    if (textElement.classList.contains('is-hidden')) return;
-                    event.stopPropagation();
-                    showWordCard(token, text);
+                word.word_tokens.forEach(token => {
+                    if (token.is_kanji) {
+                        const rubyElement = document.createElement('ruby');
+                        rubyElement.appendChild(document.createTextNode(token.surface));
+                        const rt = document.createElement('rt');
+                        rt.textContent = token.reading;
+                        rubyElement.appendChild(rt);
+                        wordSpan.appendChild(rubyElement);
+                    } else {
+                        wordSpan.appendChild(document.createTextNode(token.surface));
+                    }
                 });
 
-                textElement.appendChild(rubyElement);
+                // Add click listener for the word card to the entire word span
+                wordSpan.style.cursor = 'pointer';
+                wordSpan.addEventListener('click', (event) => {
+                    if (textElement.classList.contains('is-hidden')) return;
+                    event.stopPropagation();
+                    // Reconstruct the word surface for the explanation call
+                    const surfaceWord = word.word_tokens.map(t => t.surface).join('');
+                    showWordCard({ word: surfaceWord }, text);
+                });
+
+                textElement.appendChild(wordSpan);
             });
+
             textElement.classList.add('is-hidden');
             textElement.addEventListener('click', () => textElement.classList.remove('is-hidden'), { once: true });
         } else {
@@ -243,8 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showWordCard(token, sentence) {
         wordCardModal.classList.remove('is-hidden');
         wordCardTitle.textContent = token.word;
-        wordCardPitch.textContent = '';
-        wordCardPitch.style.display = 'none'; // Hide by default
+        wordCardPitch.style.display = 'none';
         wordCardHiragana.textContent = '加载中...';
         wordCardPosDetails.innerHTML = '';
         wordCardContext.textContent = '加载中...';
@@ -265,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            // Populate new fields with null check for pitch accent
             if (data.pitch_accent !== null && data.pitch_accent !== undefined) {
                 wordCardPitch.textContent = data.pitch_accent;
                 wordCardPitch.style.display = 'inline-flex';
