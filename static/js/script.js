@@ -244,6 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wordCardModal.classList.remove('is-hidden');
         wordCardTitle.textContent = token.word;
         wordCardPitch.textContent = '';
+        wordCardPitch.style.display = 'none'; // Hide by default
         wordCardHiragana.textContent = '加载中...';
         wordCardPosDetails.innerHTML = '';
         wordCardContext.textContent = '加载中...';
@@ -264,7 +265,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            wordCardPitch.textContent = data.pitch_accent;
+            // Populate new fields with null check for pitch accent
+            if (data.pitch_accent !== null && data.pitch_accent !== undefined) {
+                wordCardPitch.textContent = data.pitch_accent;
+                wordCardPitch.style.display = 'inline-flex';
+            }
             wordCardHiragana.textContent = data.hiragana;
             data.pos_details.forEach(pos => {
                 const posTag = document.createElement('span');
