@@ -143,7 +143,7 @@ You are a Japanese language expert providing detailed data for a language learni
 Your task is to return a single JSON object with no other text. All explanatory text must be in Chinese.
 
 The JSON object must have the following keys:
-1.  `"pitch_accent"`: An integer representing the accurate Tokyo-dialect pitch accent pattern (e.g., 0 for heiban, 1 for atamadaka, 2 for nakadaka, etc.). If the pitch accent is unknown or ambiguous, return `null`.
+1.  `"pitch_accent"`: An integer representing the Standard Japanese pitch accent pattern (e.g., 0 for 仕事, 1 for 今日, 2 for 辛い). If the pitch accent is unknown or ambiguous, return `null`.
 2.  `"hiragana"`: A string of the word's reading in hiragana.
 3.  `"pos_details"`: An array of objects, where each object details a possible part of speech for the word. Each object should have: `"pos"`, `"type"`, and optionally `"transitivity"`.
 4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning and grammatical role in the given sentence.
