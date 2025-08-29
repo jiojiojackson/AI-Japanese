@@ -174,15 +174,23 @@ You are a Japanese language expert providing detailed data for a language learni
 Your task is to return a single JSON object with no other text. All explanatory text must be in Chinese.
 
 The JSON object must have the following keys:
-1.  `"pitch_accent"`: An integer representing the Standard Japanese pitch accent pattern (e.g., 0 for 仕事, 1 for 今日, 2 for 辛い). If the pitch accent is unknown or ambiguous, return `null`.
+1.  `"pitch_accent"`: An integer representing the Standard Japanese pitch accent pattern (e.g., 0 for 仕事, 1 for 今日, 2 for 辛い). If unknown, return `null`.
 2.  `"hiragana"`: A string of the word's reading in hiragana.
-3.  `"pos_details"`: An array of objects, where each object details a possible part of speech for the word. Each object should have: `"pos"`, `"type"`, and optionally `"transitivity"`.
-4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning and grammatical role in the given sentence.
-5.  `"meanings"`: An array of objects. You must list **all common meanings** of the word. Each object represents a distinct meaning and must have:
-    - `"definition"`: A string in Chinese for the definition of this meaning.
-    - `"examples"`: An array of 1-2 example objects for this specific meaning. Each example object must have `"sentence"`, `"reading"`, and `"translation"` (in Chinese) keys.
+3.  `"pos_details"`: An array of objects detailing possible parts of speech.
+4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning in the given sentence.
+5.  `"meanings"`: An array of objects. List all common meanings. Each object must have:
+    - `"definition"`: A string in Chinese for the definition.
+    - `"examples"`: An array of example objects. Each example object must have:
+        - `"tokens"`: An array of token objects for the example sentence, following the morphological analysis rules below.
+        - `"translation"`: A string in Chinese for the translation.
 
-Example for a word with multiple meanings and a clear pitch accent like "橋":
+**Morphological Analysis Rules for `tokens` array:**
+For each token, you must provide:
+- `surface`: The character(s) of the token.
+- `is_kanji`: A boolean, `true` if the surface is Kanji.
+- `reading`: If `is_kanji` is `true`, provide the contextually correct **Hiragana** reading.
+
+Example JSON output for the word "橋":
 {
   "pitch_accent": 2,
   "hiragana": "はし",
@@ -191,21 +199,20 @@ Example for a word with multiple meanings and a clear pitch accent like "橋":
   "meanings": [
     {
       "definition": "【名词】桥，桥梁",
-      "examples": [{"sentence": "この橋は長いです。", "reading": "このはしはながいです。", "translation": "这座桥很长。"}]
-    }
-  ]
-}
-
-Example for a word with a different pitch accent like "箸":
-{
-  "pitch_accent": 1,
-  "hiragana": "はし",
-  "pos_details": [{"pos": "名詞", "type": "普通名詞"}],
-  "contextual_explanation": "在 '箸で食べる' 中, '箸' 指的是 '筷子'。",
-  "meanings": [
-    {
-      "definition": "【名词】筷子",
-      "examples": [{"sentence": "箸の持ち方が上手ですね。", "reading": "はしのもちかたがじょうずですね。", "translation": "你拿筷子的方式很好。"}]
+      "examples": [
+        {
+          "tokens": [
+            {"surface": "この", "is_kanji": false},
+            {"surface": "橋", "is_kanji": true, "reading": "はし"},
+            {"surface": "は", "is_kanji": false},
+            {"surface": "長", "is_kanji": true, "reading": "なが"},
+            {"surface": "い", "is_kanji": false},
+            {"surface": "です", "is_kanji": false},
+            {"surface": "。", "is_kanji": false}
+          ],
+          "translation": "这座桥很长。"
+        }
+      ]
     }
   ]
 }

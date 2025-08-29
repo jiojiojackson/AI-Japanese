@@ -298,10 +298,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 const definitionP = document.createElement('p');
                 definitionP.innerHTML = `<strong>${meaning.definition}</strong>`;
                 meaningDiv.appendChild(definitionP);
+
                 const exampleUl = document.createElement('ul');
                 meaning.examples.forEach(ex => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<ruby>${ex.sentence}<rt>${ex.reading}</rt></ruby><br><span class="translation">${ex.translation}</span>`;
+
+                    const sentenceSpan = document.createElement('span');
+                    ex.tokens.forEach(token => {
+                        if (token.is_kanji) {
+                            const ruby = document.createElement('ruby');
+                            ruby.appendChild(document.createTextNode(token.surface));
+                            const rt = document.createElement('rt');
+                            rt.textContent = token.reading;
+                            ruby.appendChild(rt);
+                            sentenceSpan.appendChild(ruby);
+                        } else {
+                            sentenceSpan.appendChild(document.createTextNode(token.surface));
+                        }
+                    });
+
+                    const translationSpan = document.createElement('span');
+                    translationSpan.className = 'translation';
+                    translationSpan.textContent = ex.translation;
+
+                    li.appendChild(sentenceSpan);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(translationSpan);
                     exampleUl.appendChild(li);
                 });
                 meaningDiv.appendChild(exampleUl);
