@@ -192,6 +192,32 @@ Example for a verb like "変わる":
     except Exception as e:
         return jsonify({"error": f"Error explaining word: {str(e)}"}), 500
 
+@app.route('/translate', methods=['POST'])
+def translate():
+    """
+    Translates a text to Chinese using Groq AI.
+    """
+    text = request.json.get('text')
+    model = request.json.get('model', DEFAULT_MODEL)
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    try:
+        system_prompt = "You are a helpful translation assistant. Translate the following Japanese text to Chinese. Return only the translated text, with no other explanations or surrounding text."
+
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": text}
+            ],
+            model=model,
+        )
+        translated_text = chat_completion.choices[0].message.content
+        return jsonify({"translated_text": translated_text})
+
+    except Exception as e:
+        return jsonify({"error": f"Error during translation: {str(e)}"}), 500
+
 
 @app.route('/punctuate', methods=['POST'])
 def punctuate():

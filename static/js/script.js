@@ -191,24 +191,61 @@ document.addEventListener('DOMContentLoaded', () => {
         messageElement.appendChild(textElement);
 
         if (sender === 'ai') {
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'message-buttons';
+
             const playButton = document.createElement('button');
             playButton.textContent = '▶️ 再生';
             playButton.addEventListener('click', () => playAiAudio(text, playButton));
-            messageElement.appendChild(playButton);
+
+            const translateButton = document.createElement('button');
+            translateButton.textContent = '文 翻译';
+            translateButton.addEventListener('click', () => getTranslation(text, messageElement));
+
+            buttonContainer.appendChild(playButton);
+            buttonContainer.appendChild(translateButton);
+            messageElement.appendChild(buttonContainer);
+
             playAiAudio(text, playButton);
         }
         conversationArea.appendChild(messageElement);
         conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
+    async function getTranslation(text, messageElement) {
+        const existingTranslation = messageElement.querySelector('.translation-text');
+        if (existingTranslation) {
+            existingTranslation.style.display = (existingTranslation.style.display === 'none') ? 'block' : 'none';
+            return;
+        }
+
+        try {
+            const response = await fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, model: getModelFor('conversation') }) // Use conversation model for translation
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            const translationP = document.createElement('p');
+            translationP.className = 'translation-text';
+            translationP.textContent = data.translated_text;
+            messageElement.appendChild(translationP);
+
+        } catch (error) {
+            console.error("Error fetching translation:", error);
+        }
+    }
+
     async function showWordCard(token, sentence) {
         wordCardModal.classList.remove('is-hidden');
         wordCardTitle.textContent = token.word;
         wordCardPitch.textContent = '';
-        wordCardHiragana.textContent = '読み込み中...';
+        wordCardHiragana.textContent = '加载中...';
         wordCardPosDetails.innerHTML = '';
-        wordCardContext.textContent = '読み込み中...';
-        wordCardMeanings.innerHTML = '<li>読み込み中...</li>';
+        wordCardContext.textContent = '加载中...';
+        wordCardMeanings.innerHTML = '<li>加载中...</li>';
 
         currentWordToPronounce = token.word;
 
@@ -225,7 +262,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            // Populate new fields
             wordCardPitch.textContent = data.pitch_accent;
             wordCardHiragana.textContent = data.hiragana;
             data.pos_details.forEach(pos => {
@@ -235,7 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordCardPosDetails.appendChild(posTag);
             });
 
-            // Populate existing fields
             wordCardContext.textContent = data.contextual_explanation;
             wordCardMeanings.innerHTML = '';
             data.meanings.forEach(meaning => {
