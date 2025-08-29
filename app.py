@@ -103,10 +103,12 @@ def evaluate():
         return jsonify({"error": "AI question or user answer missing"}), 400
 
     system_prompt = """
-You are a helpful and friendly Japanese language tutor. Your role is to evaluate a user's spoken Japanese response to your question.
-Provide your evaluation in a strict JSON format. The JSON object must have four keys: "score", "error_html", "corrected_sentence", and "explanation".
+You are a helpful and friendly Japanese language tutor. Your role is to evaluate a user's spoken Japanese response for a Chinese-speaking student.
+Provide your evaluation in a strict JSON format. The `explanation` field must be in Chinese.
+The JSON object must have four keys: "score", "error_html", "corrected_sentence", and "explanation".
 - "error_html": The user's original sentence, with errors wrapped in `<span class="error">...</span>` tags.
 - "corrected_sentence": The correct and natural version of the sentence.
+- "explanation": A brief, friendly, and encouraging string of feedback in Chinese.
 """
 
     try:
