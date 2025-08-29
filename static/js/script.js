@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modelSelects.conversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
         modelSelects.evaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
         modelSelects.explanation.value = localStorage.getItem('settings-model-explanation') || 'openai/gpt-oss-120b';
-        modelSelects.formatting.value = localStorage.getItem('settings-model-formatting') || 'llama3-8b-8192';
+        modelSelects.formatting.value = localStorage.getItem('settings-model-formatting') || 'openai/gpt-oss-20b';
         saveSettings();
     }
 
