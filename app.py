@@ -4,50 +4,28 @@ from flask import Flask, request, jsonify, render_template, send_file
 from dotenv import load_dotenv
 import struct
 from io import BytesIO
-from janome.tokenizer import Tokenizer
 import groq
 from google import genai
 from google.genai import types
 from gtts import gTTS
 
 # Load environment variables from .env file
-# Explicitly providing path to .env file to avoid search issues.
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 app = Flask(__name__)
-tokenizer = Tokenizer()
 
 # In a real application, you would get the API key from a secure source
-# For this example, we'll use an environment variable
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-def analyze_text_with_pos(text):
-    """
-    Tokenizes text, gets part-of-speech, and reading for each token using Janome.
-    """
-    tokens = []
-    for token in tokenizer.tokenize(text):
-        pos = token.part_of_speech.split(',')[0]
-        # Janome's reading can be Katakana, convert to Hiragana for furigana
-        # A more robust solution might be needed if readings are complex
-        reading = token.reading if token.reading != '*' else token.surface
-        tokens.append({
-            "word": token.surface,
-            "furigana": reading, # Note: Janome provides Katakana reading, might need conversion
-            "pos": pos
-        })
-    return tokens
-
 @app.route('/chat', methods=['POST'])
 def chat():
     """
-    Handles the chat request from the user, gets a response from Groq,
-    and then analyzes it for part-of-speech tagging.
+    Handles chat, cleans response, and performs POS tagging using AI calls.
     """
     messages = request.json.get('messages')
     if not messages:
@@ -56,14 +34,12 @@ def chat():
     try:
         # Step 1: Get the initial conversational response
         initial_completion = groq_client.chat.completions.create(
-            messages=messages,
-            model="openai/gpt-oss-120b",
+            messages=messages, model="openai/gpt-oss-120b"
         )
         raw_ai_text = initial_completion.choices[0].message.content
 
         # Step 2: Clean the response using a second AI call
-        cleanup_prompt = "You are a text cleanup assistant. Reformat the following text into a simple, natural paragraph of Japanese. Remove any markdown formatting (like `**`, `*`, `1.`, `-`), fix any repeated or incorrect punctuation, and ensure it reads like a natural spoken response. Do not add any new information or change the meaning. Output only the cleaned text."
-
+        cleanup_prompt = "Reformat the following text into a simple, natural paragraph of Japanese. Remove markdown (like `**`, `*`, `1.`, `-`), fix repeated punctuation, and ensure it reads like a natural spoken response. Output only the cleaned text."
         cleanup_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": cleanup_prompt},
@@ -73,8 +49,52 @@ def chat():
         )
         cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
 
-        # Step 3: Analyze the cleaned text for POS and furigana
-        analyzed_tokens = analyze_text_with_pos(cleaned_ai_text)
+        # Step 3: Perform POS tagging using a third AI call
+        pos_prompt = """
+You are a Japanese linguistics expert. Analyze the user's text by performing morphological analysis.
+Return a JSON array of objects, where each object represents a token and has three keys: "word", "furigana", and "pos".
+- "word": The token itself (the word).
+- "furigana": The furigana reading in Katakana.
+- "pos": The primary part of speech (e.g., '名詞', '動詞', '助詞', '形容詞', '記号').
+
+Example Input: 「この猫はとても可愛いですね。」
+Example JSON Output:
+[
+  {"word": "この", "furigana": "コノ", "pos": "連体詞"},
+  {"word": "猫", "furigana": "ネコ", "pos": "名詞"},
+  {"word": "は", "furigana": "ハ", "pos": "助詞"},
+  {"word": "とても", "furigana": "トテモ", "pos": "副詞"},
+  {"word": "可愛い", "furigana": "カワイイ", "pos": "形容詞"},
+  {"word": "です", "furigana": "デス", "pos": "助動詞"},
+  {"word": "ね", "furigana": "ネ", "pos": "助詞"},
+  {"word": "。", "furigana": "。", "pos": "記号"}
+]
+"""
+        pos_completion = groq_client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": pos_prompt},
+                {"role": "user", "content": cleaned_ai_text}
+            ],
+            model="openai/gpt-oss-120b",
+            response_format={"type": "json_object"},
+        )
+        # The response is a stringified JSON, so we need to parse it.
+        # The AI is asked to return an array, but the JSON object response will likely wrap it in a key.
+        # We will try to find the key that contains the array.
+        pos_data = json.loads(pos_completion.choices[0].message.content)
+        analyzed_tokens = []
+        if isinstance(pos_data, list):
+            analyzed_tokens = pos_data
+        elif isinstance(pos_data, dict):
+            # Find the first value in the dict that is a list
+            for value in pos_data.values():
+                if isinstance(value, list):
+                    analyzed_tokens = value
+                    break
+
+        if not analyzed_tokens:
+             # Fallback if parsing fails: return the plain text without tokens
+             return jsonify({"text": cleaned_ai_text, "tokens": [{"word": cleaned_ai_text, "furigana": "", "pos": "その他"}]})
 
         response_data = {
             "text": cleaned_ai_text,
