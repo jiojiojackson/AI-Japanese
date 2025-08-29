@@ -199,11 +199,17 @@ p {
 
 /* Part-of-Speech Coloring */
 .pos-token {
-    display: inline-block;
-    margin: 0;
-    padding: 0;
-    line-height: 1.8; /* Adjust line height for ruby text */
+    /* display: ruby; */ /* Rely on browser default for <ruby> tag */
+    margin: 0 2px;
+    padding: 2px 0;
     font-weight: bold;
+    line-height: 2.2; /* Increased line-height on parent for more space */
+}
+
+.text-content ruby rt {
+    font-size: 0.7rem;
+    opacity: 0.9;
+    font-weight: normal;
 }
 
 .pos-名詞 { color: #C4A200; } /* Noun - Gold */
