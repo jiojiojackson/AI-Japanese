@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         evaluation: document.getElementById('model-select-evaluation'),
         explanation: document.getElementById('model-select-explanation'),
         formatting: document.getElementById('model-select-formatting'),
+        translation: document.getElementById('model-select-translation'),
     };
 
     // Word Card Modal Elements
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modelSelects.evaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
         modelSelects.explanation.value = localStorage.getItem('settings-model-explanation') || 'openai/gpt-oss-120b';
         modelSelects.formatting.value = localStorage.getItem('settings-model-formatting') || 'openai/gpt-oss-20b';
+        modelSelects.translation.value = localStorage.getItem('settings-model-translation') || 'openai/gpt-oss-20b';
         saveSettings();
     }
 
@@ -223,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/translate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, model: getModelFor('conversation') }) // Use conversation model for translation
+                body: JSON.stringify({ text: text, model: getModelFor('translation') })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
