@@ -9,6 +9,7 @@
 <body>
 
     <div class="container">
+        <button id="open-settings-button" class="settings-btn">⚙️</button>
         <h1>日本語会話チューター</h1>
         <p>AIと日本語で会話して、スピーキングを練習しましょう。</p>
 
@@ -55,5 +56,38 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay is-hidden">
+        <div class="modal-content">
+            <h2>設定 (Settings)</h2>
+            <div class="setting-item">
+                <label for="model-select-conversation">会話・分析モデル:</label>
+                <select id="model-select-conversation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b (Recommended)</option>
+                    <option value="llama3-8b-8192">Llama3 8B</option>
+                    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+                    <option value="gemma-7b-it">Gemma 7B</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-evaluation">評価モデル:</label>
+                <select id="model-select-evaluation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b (Recommended)</option>
+                    <option value="llama3-70b-8192">Llama3 70B</option>
+                    <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-punctuation">句読点修正モデル:</label>
+                <select id="model-select-punctuation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="llama3-8b-8192">Llama3 8B (Fast)</option>
+                    <option value="gemma-7b-it">Gemma 7B</option>
+                </select>
+            </div>
+            <button id="close-settings-button">閉じる</button>
+        </div>
+    </div>
 </body>
 </html>

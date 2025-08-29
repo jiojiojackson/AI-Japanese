@@ -2,11 +2,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const recordButton = document.getElementById('record-button');
     const conversationArea = document.getElementById('conversation-area');
+
+    // Settings Modal Elements
+    const openSettingsButton = document.getElementById('open-settings-button');
+    const closeSettingsButton = document.getElementById('close-settings-button');
+    const settingsModal = document.getElementById('settings-modal');
+    const modelSelectConversation = document.getElementById('model-select-conversation');
+    const modelSelectEvaluation = document.getElementById('model-select-evaluation');
+    const modelSelectPunctuation = document.getElementById('model-select-punctuation');
+
+    // TTS Elements
     const voiceSelect = document.getElementById('voice-select');
     const ttsEngineSelect = document.getElementById('tts-engine-select');
     const geminiVoiceSettings = document.getElementById('gemini-voice-settings');
-
-    // Evaluation Area Elements (Now part of message bubbles)
 
     // --- State ---
     let isRecording = false;
@@ -17,6 +25,32 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioCache = {};
     let messageIdCounter = 0;
 
+    // --- Settings Logic ---
+    const settingsMap = {
+        conversation: modelSelectConversation,
+        evaluation: modelSelectEvaluation,
+        punctuation: modelSelectPunctuation,
+    };
+
+    function saveSettings() {
+        localStorage.setItem('settings-model-conversation', modelSelectConversation.value);
+        localStorage.setItem('settings-model-evaluation', modelSelectEvaluation.value);
+        localStorage.setItem('settings-model-punctuation', modelSelectPunctuation.value);
+    }
+
+    function loadSettings() {
+        modelSelectConversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
+        modelSelectEvaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
+        modelSelectPunctuation.value = localStorage.getItem('settings-model-punctuation') || 'llama3-8b-8192';
+
+        // Save loaded settings in case they were null
+        saveSettings();
+    }
+
+    function getModelFor(task) {
+        return settingsMap[task].value;
+    }
+
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -26,12 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.interimResults = true;
 
         recognition.onresult = (event) => {
-            let interimTranscript = '';
+            finalTranscript = "";
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
                 }
             }
         };
@@ -57,18 +89,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
             isRecording = false;
             recordButton.textContent = '🎤 録音開始';
             recordButton.classList.remove('is-recording');
         };
     } else {
-        console.error("Speech Recognition not supported.");
         recordButton.disabled = true;
         recordButton.textContent = "音声認識はサポートされていません";
     }
 
     // --- Event Listeners ---
+    openSettingsButton.addEventListener('click', () => settingsModal.classList.remove('is-hidden'));
+    closeSettingsButton.addEventListener('click', () => settingsModal.classList.add('is-hidden'));
+    modelSelectConversation.addEventListener('change', saveSettings);
+    modelSelectEvaluation.addEventListener('change', saveSettings);
+    modelSelectPunctuation.addEventListener('change', saveSettings);
+
     recordButton.addEventListener('click', () => {
         if (isRecording) {
             stopRecording();
@@ -78,11 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     ttsEngineSelect.addEventListener('change', (e) => {
-        if (e.target.value === 'gemini') {
-            geminiVoiceSettings.style.display = 'block';
-        } else {
-            geminiVoiceSettings.style.display = 'none';
-        }
+        geminiVoiceSettings.style.display = (e.target.value === 'gemini') ? 'block' : 'none';
     });
 
     // --- Functions ---
@@ -105,9 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessageToConversation(sender, text, tokens = null, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
-        if (messageId) {
-            messageElement.id = messageId;
-        }
+        if (messageId) messageElement.id = messageId;
 
         const speakerElement = document.createElement('p');
         speakerElement.classList.add('speaker');
@@ -116,30 +146,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const textElement = document.createElement('div');
         textElement.classList.add('text-content');
-        if (messageId) {
-            textElement.id = `${messageId}-text`;
-        }
+        if (messageId) textElement.id = `${messageId}-text`;
 
         if (sender === 'ai') {
             lastAiQuestion = text;
-            // Build the rich text display from tokens
             tokens.forEach(token => {
                 const rubyElement = document.createElement('ruby');
                 rubyElement.classList.add('pos-token', `pos-${token.pos}`);
-
                 rubyElement.appendChild(document.createTextNode(token.word));
-
                 const rt = document.createElement('rt');
                 rt.textContent = token.furigana;
                 rubyElement.appendChild(rt);
-
                 textElement.appendChild(rubyElement);
             });
-
             textElement.classList.add('is-hidden');
-            textElement.addEventListener('click', () => {
-                textElement.classList.remove('is-hidden');
-            }, { once: true });
+            textElement.addEventListener('click', () => textElement.classList.remove('is-hidden'), { once: true });
         } else {
             textElement.textContent = text;
         }
@@ -162,22 +183,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/punctuate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text }),
+                body: JSON.stringify({ text: text, model: getModelFor('punctuation') }),
             });
-            if (!response.ok) {
-                return text;
-            }
+            if (!response.ok) return text;
             const data = await response.json();
             return data.punctuated_text || text;
         } catch (error) {
-            console.error("Error punctuating text:", error);
             return text;
         }
     }
 
     async function playAiAudio(text, button) {
         if (!text) return;
-
         const selectedEngine = document.querySelector('input[name="tts-engine"]:checked').value;
         const selectedVoice = voiceSelect.value;
         const cacheKey = `${selectedEngine}-${selectedVoice}-${text}`;
@@ -218,7 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.textContent = '▶️ 再生';
             };
         } catch (error) {
-            console.error('Error synthesizing speech:', error);
             button.disabled = false;
             button.textContent = '▶️ 再生';
         }
@@ -229,14 +245,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages }),
+                body: JSON.stringify({ messages: messages, model: getModelFor('conversation') }),
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             messages.push({ role: 'assistant', content: data.text });
             addMessageToConversation('ai', data.text, data.tokens);
         } catch (error) {
-            console.error('Error getting AI response:', error);
             addMessageToConversation('ai', 'すみません、エラーが発生しました。');
         }
     }
@@ -246,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/evaluate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ai_question, user_answer }),
+                body: JSON.stringify({ ai_question, user_answer, model: getModelFor('evaluation') }),
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
@@ -255,10 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const textElement = document.getElementById(`${messageId}-text`);
             if (messageElement && textElement) {
                 textElement.innerHTML = data.error_html;
-
                 const feedbackContainer = document.createElement('div');
                 feedbackContainer.className = 'feedback-container';
-
                 feedbackContainer.innerHTML = `
                     <div class="feedback-item"><strong>スコア:</strong> <span class="score">${data.score} / 10</span></div>
                     <div class="feedback-item"><strong>自然な言い方:</strong> <span class="corrected-sentence">${data.corrected_sentence}</span></div>
@@ -283,5 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Initial Run ---
+    loadSettings();
     startConversation();
 });

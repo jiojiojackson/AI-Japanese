@@ -17,6 +17,7 @@ app = Flask(__name__)
 
 # In a real application, you would get the API key from a secure source
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 @app.route('/')
 def index():
@@ -28,13 +29,14 @@ def chat():
     Handles chat, cleans response, and performs POS tagging using AI calls.
     """
     messages = request.json.get('messages')
+    model = request.json.get('model', DEFAULT_MODEL)
     if not messages:
         return jsonify({"error": "No messages provided"}), 400
 
     try:
         # Step 1: Get the initial conversational response
         initial_completion = groq_client.chat.completions.create(
-            messages=messages, model="openai/gpt-oss-120b"
+            messages=messages, model=model
         )
         raw_ai_text = initial_completion.choices[0].message.content
 
@@ -45,7 +47,7 @@ def chat():
                 {"role": "system", "content": cleanup_prompt},
                 {"role": "user", "content": raw_ai_text}
             ],
-            model="openai/gpt-oss-120b",
+            model=model,
         )
         cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
 
@@ -56,44 +58,27 @@ Return a JSON array of objects, where each object represents a token and has thr
 - "word": The token itself (the word).
 - "furigana": The furigana reading in Katakana.
 - "pos": The primary part of speech (e.g., '名詞', '動詞', '助詞', '形容詞', '記号').
-
-Example Input: 「この猫はとても可愛いですね。」
-Example JSON Output:
-[
-  {"word": "この", "furigana": "コノ", "pos": "連体詞"},
-  {"word": "猫", "furigana": "ネコ", "pos": "名詞"},
-  {"word": "は", "furigana": "ハ", "pos": "助詞"},
-  {"word": "とても", "furigana": "トテモ", "pos": "副詞"},
-  {"word": "可愛い", "furigana": "カワイイ", "pos": "形容詞"},
-  {"word": "です", "furigana": "デス", "pos": "助動詞"},
-  {"word": "ね", "furigana": "ネ", "pos": "助詞"},
-  {"word": "。", "furigana": "。", "pos": "記号"}
-]
+Example JSON Output: [{"word": "この", "furigana": "コノ", "pos": "連体詞"}, {"word": "猫", "furigana": "ネコ", "pos": "名詞"}]
 """
         pos_completion = groq_client.chat.completions.create(
             messages=[
                 {"role": "system", "content": pos_prompt},
                 {"role": "user", "content": cleaned_ai_text}
             ],
-            model="openai/gpt-oss-120b",
+            model=model,
             response_format={"type": "json_object"},
         )
-        # The response is a stringified JSON, so we need to parse it.
-        # The AI is asked to return an array, but the JSON object response will likely wrap it in a key.
-        # We will try to find the key that contains the array.
         pos_data = json.loads(pos_completion.choices[0].message.content)
         analyzed_tokens = []
         if isinstance(pos_data, list):
             analyzed_tokens = pos_data
         elif isinstance(pos_data, dict):
-            # Find the first value in the dict that is a list
             for value in pos_data.values():
                 if isinstance(value, list):
                     analyzed_tokens = value
                     break
 
         if not analyzed_tokens:
-             # Fallback if parsing fails: return the plain text without tokens
              return jsonify({"text": cleaned_ai_text, "tokens": [{"word": cleaned_ai_text, "furigana": "", "pos": "その他"}]})
 
         response_data = {
@@ -112,43 +97,21 @@ def evaluate():
     """
     ai_question = request.json.get('ai_question')
     user_answer = request.json.get('user_answer')
+    model = request.json.get('model', DEFAULT_MODEL)
 
     if not user_answer or not ai_question:
         return jsonify({"error": "AI question or user answer missing"}), 400
 
     system_prompt = """
 You are a helpful and friendly Japanese language tutor. Your role is to evaluate a user's spoken Japanese response to your question.
-
-Provide your evaluation in a strict JSON format, with no other text outside the JSON object. The JSON object must have the following four keys:
-1.  `"score"`: An integer from 1 to 10, where 1 is poor and 10 is perfect.
-2.  `"error_html"`: The user's original sentence, but with any grammatical errors or awkward phrasing wrapped in `<span class="error">...</span>` tags. If there are no errors, this should be the original sentence unmodified.
-3.  `"corrected_sentence"`: The fully correct and natural-sounding version of the sentence.
-4.  `"explanation"`: A brief, friendly, and encouraging string of feedback in Japanese, explaining the main error and how the corrected sentence improves it.
-
-Example for a sentence with an error:
-User's response: 「昨日、私に公園へ行きます。」
-Your JSON output:
-{
-    "score": 6,
-    "error_html": "昨日、<span class=\"error\">私に</span>公園へ<span class=\"error\">行きます</span>。",
-    "corrected_sentence": "昨日、私は公園へ行きました。",
-    "explanation": "助詞の「に」の使い方が少し不自然ですね。「は」を使うとより良いです。また、昨日のことなので、動詞は過去形の「行きました」にしましょう。"
-}
-
-Example for a correct sentence:
-User's response: 「この猫はとても可愛いですね。」
-Your JSON output:
-{
-    "score": 10,
-    "error_html": "この猫はとても可愛いですね。",
-    "corrected_sentence": "この猫はとても可愛いですね。",
-    "explanation": "完璧です！とても自然な日本語です。"
-}
+Provide your evaluation in a strict JSON format. The JSON object must have four keys: "score", "error_html", "corrected_sentence", and "explanation".
+- "error_html": The user's original sentence, with errors wrapped in `<span class="error">...</span>` tags.
+- "corrected_sentence": The correct and natural version of the sentence.
 """
 
     try:
         chat_completion = groq_client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model=model,
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -167,6 +130,7 @@ def punctuate():
     Adds punctuation to a raw text string using Groq AI.
     """
     raw_text = request.json.get('text')
+    model = request.json.get('model', DEFAULT_MODEL)
     if not raw_text:
         return jsonify({"error": "No text provided"}), 400
 
@@ -178,7 +142,7 @@ def punctuate():
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": raw_text}
             ],
-            model="openai/gpt-oss-120b",
+            model=model,
         )
         punctuated_text = chat_completion.choices[0].message.content
         return jsonify({"punctuated_text": punctuated_text})
