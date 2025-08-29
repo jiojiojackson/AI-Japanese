@@ -137,12 +137,32 @@ def explain_word():
         return jsonify({"error": "Word or sentence not provided"}), 400
 
     system_prompt = """
-You are a Japanese language teacher. A student has clicked on a word in a sentence and wants to understand it better.
-Provide a detailed explanation in a strict JSON format. Your entire response must be only the JSON object.
+You are a Japanese language teacher explaining a word to a Chinese-speaking student.
+Your entire response must be a single JSON object, with all string values in Chinese.
 The JSON object must have the following keys:
-1. "contextual_explanation": A string explaining the word's meaning and grammatical role specifically in the given sentence.
-2. "general_usage": A string describing the word's most common general meaning and usage.
-3. "examples": An array of 2-3 example objects, where each object has "sentence", "reading", and "translation" keys.
+1.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning and grammatical role in the given sentence.
+2.  `"meanings"`: An array of objects, where each object represents a distinct meaning of the word. Each object in this array must have:
+    a. `"definition"`: A string in Chinese for the definition of this meaning.
+    b. `"examples"`: An array of 1-2 example objects for this specific meaning. Each example object must have `"sentence"`, `"reading"`, and `"translation"` (in Chinese) keys.
+
+Example JSON output structure:
+{
+  "contextual_explanation": "在当前句子中，'...'是...意思，作...使用。",
+  "meanings": [
+    {
+      "definition": "【意思1】这是第一个常见的中文意思。",
+      "examples": [
+        { "sentence": "例文１", "reading": "れいぶん１", "translation": "中文翻译1" }
+      ]
+    },
+    {
+      "definition": "【意思2】这是第二个常见的中文意思。",
+      "examples": [
+        { "sentence": "例文２", "reading": "れいぶん２", "translation": "中文翻译2" }
+      ]
+    }
+  ]
+}
 """
     user_prompt = f"Please explain the word '{word}' as it appears in the sentence: '{sentence}'"
 

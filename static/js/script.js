@@ -17,8 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wordCardTitle = document.getElementById('word-card-title');
     const wordCardPronounceButton = document.getElementById('word-card-pronounce-button');
     const wordCardContext = document.getElementById('word-card-context');
-    const wordCardGeneral = document.getElementById('word-card-general');
-    const wordCardExamples = document.getElementById('word-card-examples');
+    const wordCardMeanings = document.getElementById('word-card-meanings');
 
     // TTS Elements
     const voiceSelect = document.getElementById('voice-select');
@@ -33,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let finalTranscript = "";
     let audioCache = {};
     let messageIdCounter = 0;
-    let currentWordToPronounce = ''; // For the word card
+    let currentWordToPronounce = '';
 
     // --- Settings Logic ---
     const settingsMap = {
@@ -204,9 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function showWordCard(token, sentence) {
         wordCardModal.classList.remove('is-hidden');
         wordCardTitle.textContent = token.word;
-        wordCardContext.textContent = '読み込み中...';
-        wordCardGeneral.textContent = '読み込み中...';
-        wordCardExamples.innerHTML = '<li>読み込み中...</li>';
+        wordCardContext.textContent = '加载中...';
+        wordCardMeanings.innerHTML = '<li>加载中...</li>';
 
         currentWordToPronounce = token.word;
 
@@ -224,18 +222,29 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.error) throw new Error(data.error);
 
             wordCardContext.textContent = data.contextual_explanation;
-            wordCardGeneral.textContent = data.general_usage;
-            wordCardExamples.innerHTML = '';
-            data.examples.forEach(ex => {
-                const li = document.createElement('li');
-                li.innerHTML = `<ruby>${ex.sentence}<rt>${ex.reading}</rt></ruby><br><span class="translation">${ex.translation}</span>`;
-                wordCardExamples.appendChild(li);
+            wordCardMeanings.innerHTML = ''; // Clear loading text
+
+            data.meanings.forEach(meaning => {
+                const meaningDiv = document.createElement('div');
+                meaningDiv.className = 'meaning-group';
+
+                const definitionP = document.createElement('p');
+                definitionP.innerHTML = `<strong>${meaning.definition}</strong>`;
+                meaningDiv.appendChild(definitionP);
+
+                const exampleUl = document.createElement('ul');
+                meaning.examples.forEach(ex => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<ruby>${ex.sentence}<rt>${ex.reading}</rt></ruby><br><span class="translation">${ex.translation}</span>`;
+                    exampleUl.appendChild(li);
+                });
+                meaningDiv.appendChild(exampleUl);
+                wordCardMeanings.appendChild(meaningDiv);
             });
 
         } catch (error) {
-            wordCardContext.textContent = '説明の取得に失敗しました。';
-            wordCardGeneral.textContent = '-';
-            wordCardExamples.innerHTML = '';
+            wordCardContext.textContent = '解释获取失败。';
+            wordCardMeanings.innerHTML = '';
         }
     }
 
