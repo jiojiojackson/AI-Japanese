@@ -11,6 +11,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelSelectEvaluation = document.getElementById('model-select-evaluation');
     const modelSelectPunctuation = document.getElementById('model-select-punctuation');
 
+    // Word Card Modal Elements
+    const wordCardModal = document.getElementById('word-card-modal');
+    const closeWordCardButton = document.getElementById('close-word-card-button');
+    const wordCardTitle = document.getElementById('word-card-title');
+    const wordCardPronounceButton = document.getElementById('word-card-pronounce-button');
+    const wordCardContext = document.getElementById('word-card-context');
+    const wordCardGeneral = document.getElementById('word-card-general');
+    const wordCardExamples = document.getElementById('word-card-examples');
+
     // TTS Elements
     const voiceSelect = document.getElementById('voice-select');
     const ttsEngineSelect = document.getElementById('tts-engine-select');
@@ -42,8 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
         modelSelectConversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
         modelSelectEvaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
         modelSelectPunctuation.value = localStorage.getItem('settings-model-punctuation') || 'llama3-8b-8192';
-
-        // Save loaded settings in case they were null
         saveSettings();
     }
 
@@ -101,6 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     openSettingsButton.addEventListener('click', () => settingsModal.classList.remove('is-hidden'));
     closeSettingsButton.addEventListener('click', () => settingsModal.classList.add('is-hidden'));
+    closeWordCardButton.addEventListener('click', () => wordCardModal.classList.add('is-hidden'));
+
     modelSelectConversation.addEventListener('change', saveSettings);
     modelSelectEvaluation.addEventListener('change', saveSettings);
     modelSelectPunctuation.addEventListener('change', saveSettings);
@@ -153,10 +162,15 @@ document.addEventListener('DOMContentLoaded', () => {
             tokens.forEach(token => {
                 const rubyElement = document.createElement('ruby');
                 rubyElement.classList.add('pos-token', `pos-${token.pos}`);
+                rubyElement.style.cursor = 'pointer'; // Make it look clickable
                 rubyElement.appendChild(document.createTextNode(token.word));
                 const rt = document.createElement('rt');
                 rt.textContent = token.furigana;
                 rubyElement.appendChild(rt);
+
+                // Add click listener for the word card
+                rubyElement.addEventListener('click', () => showWordCard(token, text));
+
                 textElement.appendChild(rubyElement);
             });
             textElement.classList.add('is-hidden');
@@ -175,6 +189,49 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         conversationArea.appendChild(messageElement);
         conversationArea.scrollTop = conversationArea.scrollHeight;
+    }
+
+    async function showWordCard(token, sentence) {
+        // Show modal and set loading state
+        wordCardModal.classList.remove('is-hidden');
+        wordCardTitle.textContent = token.word;
+        wordCardContext.textContent = '読み込み中...';
+        wordCardGeneral.textContent = '読み込み中...';
+        wordCardExamples.innerHTML = '<li>読み込み中...</li>';
+
+        // Detach any previous listener and add a new one for pronunciation
+        const newPronounceButton = wordCardPronounceButton.cloneNode(true);
+        wordCardPronounceButton.parentNode.replaceChild(newPronounceButton, wordCardPronounceButton);
+        newPronounceButton.addEventListener('click', () => playAiAudio(token.word, newPronounceButton));
+
+        // Fetch explanation
+        try {
+            const response = await fetch('/explain-word', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    word: token.word,
+                    sentence: sentence,
+                    model: getModelFor('evaluation') // Use evaluation model for high-quality explanation
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            wordCardContext.textContent = data.contextual_explanation;
+            wordCardGeneral.textContent = data.general_usage;
+            wordCardExamples.innerHTML = ''; // Clear loading text
+            data.examples.forEach(ex => {
+                const li = document.createElement('li');
+                li.innerHTML = `<ruby>${ex.sentence}<rt>${ex.reading}</rt></ruby><br><span class="translation">${ex.translation}</span>`;
+                wordCardExamples.appendChild(li);
+            });
+
+        } catch (error) {
+            wordCardContext.textContent = '説明の取得に失敗しました。';
+            wordCardGeneral.textContent = '-';
+            wordCardExamples.innerHTML = '';
+        }
     }
 
     async function punctuateText(text) {

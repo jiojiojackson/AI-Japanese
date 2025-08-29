@@ -124,6 +124,42 @@ Provide your evaluation in a strict JSON format. The JSON object must have four 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/explain-word', methods=['POST'])
+def explain_word():
+    """
+    Provides a detailed explanation for a word in the context of a sentence.
+    """
+    word = request.json.get('word')
+    sentence = request.json.get('sentence')
+    model = request.json.get('model', DEFAULT_MODEL)
+
+    if not word or not sentence:
+        return jsonify({"error": "Word or sentence not provided"}), 400
+
+    system_prompt = f"""
+You are a Japanese language teacher explaining a word to a student.
+The user clicked on the word "{word}" in the sentence "{sentence}".
+Provide a detailed explanation in a strict JSON format. The JSON object must have the following keys:
+1. "contextual_explanation": A string explaining the word's meaning and grammatical role specifically in the given sentence.
+2. "general_usage": A string describing the word's most common general meaning and usage.
+3. "examples": An array of 2-3 example objects, where each object has "sentence", "reading", and "translation" keys.
+
+Your entire response must be only the JSON object.
+"""
+    try:
+        chat_completion = groq_client.chat.completions.create(
+            model=model,
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+            ]
+        )
+        explanation_data = json.loads(chat_completion.choices[0].message.content)
+        return jsonify(explanation_data)
+    except Exception as e:
+        return jsonify({"error": f"Error explaining word: {str(e)}"}), 500
+
+
 @app.route('/punctuate', methods=['POST'])
 def punctuate():
     """

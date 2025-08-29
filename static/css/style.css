@@ -225,6 +225,66 @@ p {
 .pos-フィラー { color: #778899; } /* Filler - LightSlateGray */
 .pos-その他 { color: #778899; } /* Other - LightSlateGray */
 
+/* Word Card Modal Styles */
+#word-card-pronounce-button {
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.word-card-section {
+    margin-bottom: 15px;
+}
+
+.word-card-section strong {
+    color: #34495e;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 3px;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+#word-card-examples {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+#word-card-examples li {
+    background-color: #f8f9fa;
+    border: 1px solid #e1e1e1;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+#word-card-examples .reading {
+    font-size: 0.8rem;
+    color: #555;
+}
+
+#word-card-examples .translation {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+#close-word-card-button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #7f8c8d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
 /* Settings Modal Styles */
 .settings-btn {
     position: absolute;
