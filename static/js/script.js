@@ -33,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let finalTranscript = "";
     let audioCache = {};
     let messageIdCounter = 0;
+    let currentWordToPronounce = ''; // For the word card
 
     // --- Settings Logic ---
     const settingsMap = {
@@ -110,6 +111,12 @@ document.addEventListener('DOMContentLoaded', () => {
     closeSettingsButton.addEventListener('click', () => settingsModal.classList.add('is-hidden'));
     closeWordCardButton.addEventListener('click', () => wordCardModal.classList.add('is-hidden'));
 
+    wordCardPronounceButton.addEventListener('click', () => {
+        if (currentWordToPronounce) {
+            playAiAudio(currentWordToPronounce, wordCardPronounceButton);
+        }
+    });
+
     modelSelectConversation.addEventListener('change', saveSettings);
     modelSelectEvaluation.addEventListener('change', saveSettings);
     modelSelectPunctuation.addEventListener('change', saveSettings);
@@ -162,19 +169,15 @@ document.addEventListener('DOMContentLoaded', () => {
             tokens.forEach(token => {
                 const rubyElement = document.createElement('ruby');
                 rubyElement.classList.add('pos-token', `pos-${token.pos}`);
-                rubyElement.style.cursor = 'pointer'; // Make it look clickable
+                rubyElement.style.cursor = 'pointer';
                 rubyElement.appendChild(document.createTextNode(token.word));
                 const rt = document.createElement('rt');
                 rt.textContent = token.furigana;
                 rubyElement.appendChild(rt);
 
-                // Add click listener for the word card
                 rubyElement.addEventListener('click', (event) => {
-                    if (textElement.classList.contains('is-hidden')) {
-                        // If text is hidden, do nothing. The parent click will handle it.
-                        return;
-                    }
-                    event.stopPropagation(); // Stop the event from bubbling further
+                    if (textElement.classList.contains('is-hidden')) return;
+                    event.stopPropagation();
                     showWordCard(token, text);
                 });
 
@@ -199,19 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function showWordCard(token, sentence) {
-        // Show modal and set loading state
         wordCardModal.classList.remove('is-hidden');
         wordCardTitle.textContent = token.word;
         wordCardContext.textContent = '読み込み中...';
         wordCardGeneral.textContent = '読み込み中...';
         wordCardExamples.innerHTML = '<li>読み込み中...</li>';
 
-        // Detach any previous listener and add a new one for pronunciation
-        const newPronounceButton = wordCardPronounceButton.cloneNode(true);
-        wordCardPronounceButton.parentNode.replaceChild(newPronounceButton, wordCardPronounceButton);
-        newPronounceButton.addEventListener('click', () => playAiAudio(token.word, newPronounceButton));
+        currentWordToPronounce = token.word;
 
-        // Fetch explanation
         try {
             const response = await fetch('/explain-word', {
                 method: 'POST',
@@ -219,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     word: token.word,
                     sentence: sentence,
-                    model: getModelFor('evaluation') // Use evaluation model for high-quality explanation
+                    model: getModelFor('evaluation')
                 })
             });
             const data = await response.json();
@@ -227,7 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             wordCardContext.textContent = data.contextual_explanation;
             wordCardGeneral.textContent = data.general_usage;
-            wordCardExamples.innerHTML = ''; // Clear loading text
+            wordCardExamples.innerHTML = '';
             data.examples.forEach(ex => {
                 const li = document.createElement('li');
                 li.innerHTML = `<ruby>${ex.sentence}<rt>${ex.reading}</rt></ruby><br><span class="translation">${ex.translation}</span>`;
