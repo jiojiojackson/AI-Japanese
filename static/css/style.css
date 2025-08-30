@@ -1,10 +1,11 @@
 :root {
     --font-family-sans: 'Noto Sans JP', sans-serif;
-    --background-color: #f8f9fa;
+    --background-color: #f4f6f8;
     --surface-color: #ffffff;
-    --primary-color: #007bff;
-    --text-color-main: #212529;
-    --text-color-muted: #6c757d;
+    --primary-color: #5B8CFF; /* softer blue */
+    --accent-color: #7AE582; /* for success/actions */
+    --text-color-main: #0f1724;
+    --text-color-muted: #556270;
     --border-color: #dee2e6;
     --error-color: #dc3545;
     --success-color: #28a745;
@@ -13,100 +14,64 @@
     --border-radius: 0.75rem; /* Slightly larger radius */
 }
 
+
 body {
     font-family: var(--font-family-sans);
-    background-color: var(--background-color);
+    background: linear-gradient(180deg, #f7fafc 0%, var(--background-color) 100%);
     color: var(--text-color-main);
     margin: 0;
     padding: 1rem;
-    line-height: 1.7; /* Increased for better readability */
+    line-height: 1.6;
 }
 
 .container {
     width: 100%;
-    max-width: 800px;
+    max-width: 1000px;
     margin: 2rem auto;
     background-color: var(--surface-color);
-    border-radius: var(--border-radius);
-    padding: 2.5rem; /* More padding */
+    border-radius: calc(var(--border-radius) + 0.25rem);
+    padding: 1.5rem;
     box-shadow: var(--shadow-md);
     position: relative;
 }
 
-h1 {
-    text-align: center;
-    color: var(--text-color-main);
-    margin-bottom: 0.5rem;
-    font-weight: 700;
-}
-
-p.subtitle { /* Added a class for the subtitle for specific styling */
-    text-align: center;
-    color: var(--text-color-muted);
-    margin-top: 0;
-    margin-bottom: 2.5rem;
-}
+h1 { margin: 0; font-weight: 700; }
+.brand { display:flex; gap:12px; align-items:center; }
+.logo { font-size:32px; }
+.app-header { display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0 1rem 0; }
+.subtitle { margin:0; color:var(--text-color-muted); font-size:0.95rem }
 
 /* Conversation Area */
 #conversation-area {
-    height: 65vh;
+    height: 64vh;
     overflow-y: auto;
-    border: 1px solid var(--border-color);
-    padding: 1rem 1.5rem;
-    margin-bottom: 1.5rem;
-    background-color: #f1f3f5; /* Slightly darker background */
-    border-radius: var(--border-radius);
+    border-radius: calc(var(--border-radius) - 0.25rem);
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    background-color: #f8fafc;
+    border: 1px solid rgba(15,23,36,0.04);
 }
 
-.message {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1.5rem;
-    max-width: 85%;
-}
-.ai-message { align-items: flex-start; }
-.user-message { align-items: flex-end; margin-left: auto; }
+.message { display:flex; flex-direction:column; gap:6px; margin-bottom:1.25rem; max-width:85%; }
+.ai-message { align-items:flex-start; }
+.user-message { align-items:flex-end; margin-left:auto; }
 
-.speaker {
-    font-weight: 500;
-    font-size: 0.85rem;
-    margin-bottom: 0.25rem;
-    color: var(--text-color-muted);
-    padding: 0 0.5rem;
-}
-.ai-message .speaker { text-align: left; }
-.user-message .speaker { text-align: right; }
+.speaker { font-weight:600; font-size:0.85rem; color:var(--text-color-muted); }
+.ai-message .speaker{ text-align:left }
+.user-message .speaker{ text-align:right }
 
 .text-content {
-    padding: 0.8rem 1.2rem;
-    border-radius: var(--border-radius);
+    padding: 0.85rem 1.15rem;
+    border-radius: 14px;
     word-break: break-word;
     box-shadow: var(--shadow-sm);
+    max-width: 70ch;
 }
-.ai-message .text-content { background-color: var(--surface-color); border-top-left-radius: 0; }
-.user-message .text-content { background-color: var(--primary-color); color: #fff; border-top-right-radius: 0; }
+.ai-message .text-content { background: linear-gradient(180deg,#fff,#fbfdff); border-top-left-radius:4px; color:var(--text-color-main); }
+.user-message .text-content { background: linear-gradient(180deg,var(--primary-color), #4f7ef0); color:#fff; border-top-right-radius:4px; }
 
-.text-content.is-hidden {
-    position: relative;
-    filter: blur(5px);
-    cursor: pointer;
-}
-.text-content.is-hidden::before {
-    content: 'クリックしてテキストを表示';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255, 255, 255, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: var(--text-color-main);
-    font-weight: 500;
-    border-radius: var(--border-radius);
-    text-align: center;
-}
+.text-content.is-hidden { position:relative; filter:blur(4px); cursor:pointer }
+.text-content.is-hidden::after { content:'クリックして表示'; position:absolute; inset:0; display:flex; justify-content:center; align-items:center; color:var(--text-color-main); background: linear-gradient(90deg, rgba(255,255,255,0.6), rgba(255,255,255,0.3)); border-radius:14px; font-weight:600 }
 
 .user-message .text-content .error {
     color: #fff;
@@ -116,38 +81,21 @@ p.subtitle { /* Added a class for the subtitle for specific styling */
 }
 
 /* User Feedback inside bubble */
-.feedback-container { margin-top: 0.75rem; padding: 0.75rem; border-radius: var(--border-radius); background-color: rgba(0,0,0,0.15); font-size: 0.9rem; }
-.feedback-item { margin-bottom: 0.5rem; }
-.feedback-item:last-child { margin-bottom: 0; }
-.feedback-item strong { color: #fff; opacity: 0.8; }
-.feedback-item .score { font-weight: bold; color: #fff; }
-.feedback-item .corrected-sentence { font-style: italic; color: #c7d2fe; }
+.feedback-container { margin-top:0.6rem; padding:0.65rem; border-radius:10px; background:rgba(91,140,255,0.06); font-size:0.95rem }
+.feedback-item { margin-bottom:0.5rem }
+.feedback-item strong{ color:var(--text-color-main) }
 
 /* Message Buttons */
-.message-buttons { margin-top: 0.5rem; display: flex; gap: 0.5rem; }
-.ai-message .message-buttons button {
-    background-color: #e9ecef;
-    border: 1px solid var(--border-color);
-    color: var(--text-color-muted);
-}
-.ai-message .message-buttons button:hover { background-color: #ced4da; }
-.user-message .message-buttons { justify-content: flex-end; }
+.message-buttons { margin-top:0.5rem; display:flex; gap:0.5rem }
+.message-buttons button{ background:transparent; border:1px solid rgba(15,23,36,0.06); padding:6px 10px; border-radius:10px; cursor:pointer }
+.message-buttons button:hover{ background:rgba(91,140,255,0.06) }
 
 /* FIX: Translation text styling */
-.translation-text {
-    font-size: 0.9rem;
-    color: var(--text-color-main); /* Darker color for better contrast */
-    font-style: normal; /* Not italic */
-    margin-top: 10px;
-    padding: 10px;
-    background-color: rgba(0,0,0,0.03);
-    border-top: 1px solid var(--border-color);
-    border-radius: 4px;
-}
+.translation-text{ font-size:0.95rem; color:var(--text-color-main); margin-top:10px; padding:10px; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:8px }
 
 /* POS Coloring */
-.pos-token { font-weight: 500; padding: 1px 0; }
-.text-content ruby rt { font-size: 0.75rem; opacity: 0.9; font-weight: 400; }
+.pos-token { font-weight:600; padding:1px 0; margin-right:4px }
+.text-content ruby rt{ font-size:0.78rem; opacity:0.95 }
 .pos-名詞 { color: #D97706; } /* Noun - Amber */
 .pos-動詞 { color: #059669; } /* Verb - Emerald */
 .pos-形容詞 { color: #2563EB; } /* Adjective - Blue */
@@ -160,126 +108,38 @@ p.subtitle { /* Added a class for the subtitle for specific styling */
 .pos-記号, .pos-フィラー, .pos-その他 { color: var(--text-color-muted); }
 
 /* Main Record Button */
-#user-controls { text-align: center; }
-#record-button {
-    background-color: var(--error-color);
-    color: white;
-    border: none;
-    padding: 1rem 2rem;
-    font-size: 1.1rem;
-    font-weight: 500;
-    border-radius: 50px;
-    cursor: pointer;
-    transition: background-color 0.2s, transform 0.2s;
-}
-#record-button:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
-#record-button.is-recording { background-color: var(--success-color); }
+#user-controls { text-align:center; margin-top:8px }
+#record-button { background:var(--primary-color); color:white; border:none; padding:12px 26px; font-size:1.05rem; border-radius:999px; cursor:pointer; box-shadow:0 6px 18px rgba(91,140,255,0.12); transition:transform .12s ease }
+#record-button:hover{ transform:translateY(-3px) }
+#record-button.is-recording{ background:var(--accent-color); box-shadow:0 8px 20px rgba(122,229,130,0.14) }
 
 /* Modals (Settings & Word Card) */
-.settings-btn {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    font-size: 1.5rem;
-    cursor: pointer;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    color: var(--text-color-muted);
-    transition: all 0.2s;
-}
-.settings-btn:hover { background-color: var(--background-color); color: var(--primary-color); }
+.settings-btn{ background:transparent; border:1px solid rgba(15,23,36,0.06); width:44px; height:44px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer }
+.settings-btn:hover{ background:rgba(91,140,255,0.06) }
 
-.modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 1000;
-    opacity: 0; visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0s 0.3s;
-}
-.modal-overlay:not(.is-hidden) { opacity: 1; visibility: visible; transition: opacity 0.3s ease; }
-
-.modal-content {
-    background-color: var(--surface-color);
-    padding: 2rem;
-    border-radius: var(--border-radius);
-    width: 90%;
-    max-width: 550px; /* Wider modal */
-    box-shadow: var(--shadow-md);
-    max-height: 85vh;
-    overflow-y: auto;
-}
-.modal-content h2 { margin-top: 0; text-align: center; margin-bottom: 2rem; }
+.modal-overlay{ position:fixed; inset:0; background:rgba(10,12,16,0.36); display:flex; align-items:center; justify-content:center; z-index:1200; opacity:0; visibility:hidden; transition:opacity .22s ease }
+.modal-overlay:not(.is-hidden){ opacity:1; visibility:visible }
+.modal-content{ background:var(--surface-color); padding:1.5rem; border-radius:14px; width:92%; max-width:640px; box-shadow:0 8px 24px rgba(17,24,39,0.08); max-height:86vh; overflow:auto }
+.modal-content h2{ margin-top:0; text-align:center; margin-bottom:1.25rem }
 
 /* FIX: Settings Card Layout */
-.setting-item { margin-bottom: 1.5rem; }
-.setting-item label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
-    font-size: 0.9rem;
-    color: var(--text-color-muted);
-}
-.setting-item select, #tts-engine-select {
-    width: 100%;
-    padding: 0.75rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--border-color);
-    background-color: var(--background-color);
-    font-size: 1rem;
-}
-#tts-engine-select { display: flex; gap: 1rem; padding: 0.5rem; }
-#tts-engine-select label { font-weight: 400; cursor: pointer; }
-#tts-engine-select input { margin-right: 0.5rem; }
+.setting-item{ margin-bottom:1rem }
+.setting-item label{ display:block; margin-bottom:0.45rem; font-weight:600; color:var(--text-color-muted) }
+.setting-item select, #tts-engine-select{ width:100%; padding:10px; border-radius:8px; border:1px solid rgba(15,23,36,0.06); background:#fff }
+#tts-engine-select{ display:flex; gap:12px; align-items:center }
+#tts-engine-select label{ cursor:pointer }
+#tts-engine-select input{ margin-right:6px }
 
-#close-settings-button, #close-word-card-button {
-    display: block; width: 100%;
-    padding: 0.85rem;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    margin-top: 1.5rem;
-}
+#close-settings-button, #close-word-card-button{ display:block; width:100%; padding:12px; background:var(--primary-color); color:white; border:none; border-radius:12px; font-weight:600 }
 
 /* FIX: Word Card Layout */
-.word-card-header { display: flex; align-items: center; margin-bottom: 0; gap: 0.75rem; }
-#word-card-title { margin: 0; font-size: 2rem; }
-.pitch-accent {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    border: 2px solid var(--primary-color);
-    border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    flex-shrink: 0;
-}
-.hiragana-reading { font-size: 1.1rem; color: var(--text-color-muted); margin-top: 0.25rem; margin-bottom: 1rem; }
-.pos-details-container { margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
-.pos-detail-item { background-color: #e9ecef; color: var(--text-color-main); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; }
-#word-card-pronounce-button {
-    background-color: var(--success-color);
-    color: white;
-    border: none;
-    padding: 10px 15px;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    margin-bottom: 1.5rem;
-    font-weight: 500;
-}
+.word-card-header{ display:flex; align-items:center; gap:12px }
+#word-card-title{ margin:0; font-size:1.6rem }
+.pitch-accent{ font-size:0.95rem; font-weight:700; color:var(--primary-color); border:2px solid rgba(91,140,255,0.18); border-radius:8px; padding:6px }
+.hiragana-reading{ font-size:1rem; color:var(--text-color-muted); margin:6px 0 }
+.pos-details-container{ margin-bottom:1rem; display:flex; flex-wrap:wrap; gap:8px }
+.pos-detail-item{ background:rgba(15,23,36,0.04); color:var(--text-color-main); padding:6px 10px; border-radius:10px }
+#word-card-pronounce-button{ background:var(--accent-color); color:#063018; border:none; padding:8px 12px; border-radius:10px; cursor:pointer; margin-bottom:10px }
 .word-card-section { margin-bottom: 1.5rem; }
 .word-card-section strong {
     color: var(--text-color-main);
@@ -297,4 +157,12 @@ p.subtitle { /* Added a class for the subtitle for specific styling */
 }
 #word-card-examples .reading { font-size: 0.8rem; color: var(--text-color-muted); }
 #word-card-examples .translation { font-size: 0.95rem; color: #059669; font-style: normal; }
-#close-word-card-button { background-color: var(--text-color-muted); }
+#close-word-card-button{ background:rgba(15,23,36,0.06); color:var(--text-color-main) }
+
+/* Responsive adjustments */
+@media (max-width:720px){
+    .container{ padding:1rem }
+    #conversation-area{ height:56vh }
+    .brand{ gap:10px }
+    .logo{ font-size:26px }
+}

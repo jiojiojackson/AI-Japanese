@@ -12,11 +12,20 @@
 <body>
 
     <div class="container">
-        <button id="open-settings-button" class="settings-btn">⚙️</button>
-        <h1>日本語会話チューター</h1>
-        <p>AIと日本語で会話して、スピーキングを練習しましょう。</p>
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo" aria-hidden="true">🗣️</div>
+                <div>
+                    <h1>日本語会話チューター</h1>
+                    <p class="subtitle">AIと日本語で会話して、スピーキングを練習しましょう。</p>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button id="open-settings-button" class="settings-btn" aria-label="設定">⚙️</button>
+            </div>
+        </header>
 
-        <div class="settings-container">
+        <div class="settings-container" aria-hidden="true">
             <div class="settings-area">
                 <label for="tts-engine-select">声のエンジン:</label>
                 <div id="tts-engine-select">
@@ -31,15 +40,16 @@
                 <select name="voices" id="voice-select">
                     <option value="zephyr">Zephyr</option>
                     <option value="achernar">Achernar</option>
-                <option value="algenib">Algenib</option>
-                <option value="gacrux">Gacrux</option>
-                <option value="kore">Kore</option>
-                <option value="puck">Puck</option>
-                <option value="sulafat">Sulafat</option>
-            </select>
+                    <option value="algenib">Algenib</option>
+                    <option value="gacrux">Gacrux</option>
+                    <option value="kore">Kore</option>
+                    <option value="puck">Puck</option>
+                    <option value="sulafat">Sulafat</option>
+                </select>
+            </div>
         </div>
 
-        <div id="conversation-area">
+        <main id="conversation-area" role="region" aria-label="会話履歴">
             <!-- Messages will be appended here -->
             <div class="message ai-message">
                 <p class="speaker">AI:</p>
@@ -47,14 +57,13 @@
                     <!-- AI's furigana text will go here -->
                     <ruby>今日<rt>きょう</rt></ruby>は<ruby>天気<rt>てんき</rt></ruby>がいいですね。
                 </div>
-                <button id="play-button" disabled>▶️ 再生</button>
+                <button id="play-button" class="play-btn" disabled aria-label="AI の発話を再生">▶️ 再生</button>
             </div>
-        </div>
+        </main>
 
         <div id="user-controls">
-            <button id="record-button">🎤 録音開始</button>
+            <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音開始">🎤 録音開始</button>
         </div>
-
 
     </div>
 
