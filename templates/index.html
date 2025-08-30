@@ -4,26 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>日本語会話チューター (Japanese Speaking Tutor)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
     <div class="container">
-        <h1>日本語会話チューター</h1>
-        <p>AIと日本語で会話して、スピーキングを練習しましょう。</p>
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo" aria-hidden="true">🗣️</div>
+                <div>
+                    <h1>日本語会話チューター</h1>
+                    <p class="subtitle">AIと日本語で会話して、スピーキングを練習しましょう。</p>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button id="open-settings-button" class="settings-btn" aria-label="設定">⚙️</button>
+            </div>
+        </header>
 
-        <div class="settings-area">
-            <label for="voice-select">AIの音色:</label>
-            <select name="voices" id="voice-select">
-                <option value="Echo">Echo (Male)</option>
-                <option value="Juniper">Juniper (Female)</option>
-                <option value="Luna">Luna (Female 2)</option>
-                <option value="Starlight">Starlight (Male 2)</option>
-                <option value="Zephyr">Zephyr</option>
-            </select>
+        <div class="settings-container" aria-hidden="true">
+            <div class="settings-area">
+                <label for="tts-engine-select">声のエンジン:</label>
+                <div id="tts-engine-select">
+                    <input type="radio" id="engine-gemini" name="tts-engine" value="gemini" checked>
+                    <label for="engine-gemini">高品質 (Gemini)</label>
+                    <input type="radio" id="engine-gtts" name="tts-engine" value="gtts">
+                    <label for="engine-gtts">標準 (gTTS)</label>
+                </div>
+            </div>
+            <div class="settings-area" id="gemini-voice-settings">
+                <label for="voice-select">AIの音色 (Gemini):</label>
+                <select name="voices" id="voice-select">
+                    <option value="zephyr">Zephyr</option>
+                    <option value="achernar">Achernar</option>
+                    <option value="algenib">Algenib</option>
+                    <option value="gacrux">Gacrux</option>
+                    <option value="kore">Kore</option>
+                    <option value="puck">Puck</option>
+                    <option value="sulafat">Sulafat</option>
+                </select>
+            </div>
         </div>
 
-        <div id="conversation-area">
+        <main id="conversation-area" role="region" aria-label="会話履歴">
             <!-- Messages will be appended here -->
             <div class="message ai-message">
                 <p class="speaker">AI:</p>
@@ -31,27 +57,81 @@
                     <!-- AI's furigana text will go here -->
                     <ruby>今日<rt>きょう</rt></ruby>は<ruby>天気<rt>てんき</rt></ruby>がいいですね。
                 </div>
-                <button id="play-button" disabled>▶️ 再生</button>
+                <button id="play-button" class="play-btn" disabled aria-label="AI の発話を再生">▶️ 再生</button>
             </div>
-        </div>
+        </main>
 
         <div id="user-controls">
-            <button id="record-button">🎤 録音開始</button>
-        </div>
-
-        <div id="evaluation-area">
-            <h2>評価 (Evaluation)</h2>
-            <div id="score-section">
-                <strong>スコア:</strong> <span id="score-value">N/A</span>
-            </div>
-            <div id="suggestions-section">
-                <strong>改善提案:</strong>
-                <p id="suggestions-text">ここに改善のためのアドバイスが表示されます。</p>
-            </div>
+            <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音開始">🎤 録音開始</button>
         </div>
 
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-overlay is-hidden">
+        <div class="modal-content">
+            <h2>設定 (Settings)</h2>
+            <div class="setting-item">
+                <label for="model-select-conversation">会話・分析モデル:</label>
+                <select id="model-select-conversation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-translation">翻訳モデル:</label>
+                <select id="model-select-translation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-evaluation">評価モデル:</label>
+                <select id="model-select-evaluation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-explanation">単語解説モデル:</label>
+                <select id="model-select-explanation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-formatting">書式設定モデル (句読点):</label>
+                <select id="model-select-formatting">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                </select>
+            </div>
+            <button id="close-settings-button">閉じる</button>
+        </div>
+    </div>
+
+    <!-- Word Card Modal -->
+    <div id="word-card-modal" class="modal-overlay is-hidden">
+        <div class="modal-content">
+            <div class="word-card-header">
+                <h2 id="word-card-title"></h2>
+                <span id="word-card-pitch" class="pitch-accent"></span>
+            </div>
+            <p id="word-card-hiragana" class="hiragana-reading"></p>
+            <div id="word-card-pos-details" class="pos-details-container"></div>
+            <button id="word-card-pronounce-button">🔊 发音</button>
+            <div class="word-card-section">
+                <strong>句中含义:</strong>
+                <p id="word-card-context"></p>
+            </div>
+            <div class="word-card-section">
+                <strong>常见用法及例句:</strong>
+                <div id="word-card-meanings"></div>
+            </div>
+            <button id="close-word-card-button">关闭</button>
+        </div>
+    </div>
 </body>
 </html>

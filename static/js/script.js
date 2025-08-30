@@ -1,24 +1,65 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM fully loaded and parsed. Script is running.");
-
     // --- DOM Elements ---
     const recordButton = document.getElementById('record-button');
     const conversationArea = document.getElementById('conversation-area');
+
+    // Settings Modal Elements
+    const openSettingsButton = document.getElementById('open-settings-button');
+    const closeSettingsButton = document.getElementById('close-settings-button');
+    const settingsModal = document.getElementById('settings-modal');
+    const modelSelects = {
+        conversation: document.getElementById('model-select-conversation'),
+        evaluation: document.getElementById('model-select-evaluation'),
+        explanation: document.getElementById('model-select-explanation'),
+        formatting: document.getElementById('model-select-formatting'),
+        translation: document.getElementById('model-select-translation'),
+    };
+
+    // Word Card Modal Elements
+    const wordCardModal = document.getElementById('word-card-modal');
+    const closeWordCardButton = document.getElementById('close-word-card-button');
+    const wordCardTitle = document.getElementById('word-card-title');
+    const wordCardPitch = document.getElementById('word-card-pitch');
+    const wordCardHiragana = document.getElementById('word-card-hiragana');
+    const wordCardPosDetails = document.getElementById('word-card-pos-details');
+    const wordCardPronounceButton = document.getElementById('word-card-pronounce-button');
+    const wordCardContext = document.getElementById('word-card-context');
+    const wordCardMeanings = document.getElementById('word-card-meanings');
+
+    // TTS Elements
     const voiceSelect = document.getElementById('voice-select');
-
-    // Initial AI message elements are templates, we'll create new ones
-    const initialAiTextElement = document.getElementById('ai-text');
-    const initialPlayButton = document.getElementById('play-button');
-
-    const scoreValueElement = document.getElementById('score-value');
-    const suggestionsTextElement = document.getElementById('suggestions-text');
+    const ttsEngineSelect = document.getElementById('tts-engine-select');
+    const geminiVoiceSettings = document.getElementById('gemini-voice-settings');
 
     // --- State ---
     let isRecording = false;
     let recognition;
-    let messages = []; // Array to store conversation history
+    let messages = [];
     let lastAiQuestion = "";
-    let finalTranscript = ""; // To accumulate transcript
+    let finalTranscript = "";
+    let audioCache = {};
+    let messageIdCounter = 0;
+    let currentWordToPronounce = '';
+
+    // --- Settings Logic ---
+    function saveSettings() {
+        for (const key in modelSelects) {
+            localStorage.setItem(`settings-model-${key}`, modelSelects[key].value);
+        }
+    }
+
+    function loadSettings() {
+        modelSelects.conversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
+        modelSelects.evaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
+        modelSelects.explanation.value = localStorage.getItem('settings-model-explanation') || 'openai/gpt-oss-120b';
+        modelSelects.formatting.value = localStorage.getItem('settings-model-formatting') || 'openai/gpt-oss-20b';
+        modelSelects.translation.value = localStorage.getItem('settings-model-translation') || 'openai/gpt-oss-20b';
+        saveSettings();
+    }
+
+    function getModelFor(task) {
+        return modelSelects[task].value;
+    }
 
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -29,49 +70,59 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.interimResults = true;
 
         recognition.onresult = (event) => {
-            let interimTranscript = '';
+            finalTranscript = "";
             for (let i = event.resultIndex; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
                 }
             }
         };
 
-        recognition.onend = () => {
-            console.log("Recognition service ended.");
-            if (isRecording) { // Only process if it was a user-initiated stop
+        recognition.onend = async () => {
+            if (isRecording) {
                 isRecording = false;
                 recordButton.textContent = '🎤 録音開始';
                 recordButton.classList.remove('is-recording');
+                const rawUserAnswer = finalTranscript.trim();
 
-                const userAnswer = finalTranscript.trim();
-                if (userAnswer) {
-                    console.log('Processing final answer on "end" event: ' + userAnswer);
-                    addMessageToConversation('user', userAnswer);
-                    messages.push({ role: 'user', content: userAnswer });
+                if (rawUserAnswer) {
+                    const messageId = `user-message-${messageIdCounter++}`;
+                    const punctuatedAnswer = await punctuateText(rawUserAnswer);
+
+                    addMessageToConversation('user', punctuatedAnswer, null, messageId);
+                    messages.push({ role: 'user', content: punctuatedAnswer });
                     getAiResponse();
-                    getEvaluation(lastAiQuestion, userAnswer);
+                    getEvaluation(lastAiQuestion, punctuatedAnswer, messageId);
                 }
-                finalTranscript = ""; // Reset for next turn
+                finalTranscript = "";
             }
         };
 
         recognition.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            isRecording = false; // Reset state on error
+            isRecording = false;
             recordButton.textContent = '🎤 録音開始';
             recordButton.classList.remove('is-recording');
         };
-
     } else {
-        console.error("Speech Recognition not supported.");
         recordButton.disabled = true;
         recordButton.textContent = "音声認識はサポートされていません";
     }
 
     // --- Event Listeners ---
+    openSettingsButton.addEventListener('click', () => settingsModal.classList.remove('is-hidden'));
+    closeSettingsButton.addEventListener('click', () => settingsModal.classList.add('is-hidden'));
+    closeWordCardButton.addEventListener('click', () => wordCardModal.classList.add('is-hidden'));
+
+    wordCardPronounceButton.addEventListener('click', () => {
+        if (currentWordToPronounce) {
+            playAiAudio(currentWordToPronounce, wordCardPronounceButton);
+        }
+    });
+
+    for (const key in modelSelects) {
+        modelSelects[key].addEventListener('change', saveSettings);
+    }
+
     recordButton.addEventListener('click', () => {
         if (isRecording) {
             stopRecording();
@@ -80,29 +131,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    ttsEngineSelect.addEventListener('change', (e) => {
+        geminiVoiceSettings.style.display = (e.target.value === 'gemini') ? 'block' : 'none';
+    });
+
     // --- Functions ---
     function startRecording() {
         if (recognition && !isRecording) {
-            finalTranscript = ""; // Clear stale transcript before starting
+            finalTranscript = "";
             isRecording = true;
             recognition.start();
             recordButton.textContent = '⏹️ 録音停止';
             recordButton.classList.add('is-recording');
-            console.log("Recording started...");
         }
     }
 
     function stopRecording() {
         if (recognition && isRecording) {
-            // Just stop the service. The `onend` event will handle the rest.
             recognition.stop();
-            console.log("Stop button clicked. Waiting for 'onend' event...");
         }
     }
 
-    function addMessageToConversation(sender, text, furiganaHTML = null) {
+    function addMessageToConversation(sender, text, tokens = null, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
+        if (messageId) messageElement.id = messageId;
 
         const speakerElement = document.createElement('p');
         speakerElement.classList.add('speaker');
@@ -111,50 +164,236 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const textElement = document.createElement('div');
         textElement.classList.add('text-content');
+        if (messageId) textElement.id = `${messageId}-text`;
 
-        if (sender === 'ai' && furiganaHTML) {
-            textElement.innerHTML = furiganaHTML;
-            lastAiQuestion = text; // Save the plain text for context
+        if (sender === 'ai') {
+            lastAiQuestion = text;
+            // Build the rich text display from the new nested token structure
+            tokens.forEach(word => {
+                const wordSpan = document.createElement('span');
+                wordSpan.classList.add('pos-token', `pos-${word.pos}`);
+
+                word.word_tokens.forEach(token => {
+                    if (token.is_kanji) {
+                        const rubyElement = document.createElement('ruby');
+                        rubyElement.appendChild(document.createTextNode(token.surface));
+                        const rt = document.createElement('rt');
+                        rt.textContent = token.reading;
+                        rubyElement.appendChild(rt);
+                        wordSpan.appendChild(rubyElement);
+                    } else {
+                        wordSpan.appendChild(document.createTextNode(token.surface));
+                    }
+                });
+
+                // Add click listener for the word card to the entire word span
+                wordSpan.style.cursor = 'pointer';
+                wordSpan.addEventListener('click', (event) => {
+                    if (textElement.classList.contains('is-hidden')) return;
+                    event.stopPropagation();
+                    // Reconstruct the word surface for the explanation call
+                    const surfaceWord = word.word_tokens.map(t => t.surface).join('');
+                    showWordCard({ word: surfaceWord }, text);
+                });
+
+                textElement.appendChild(wordSpan);
+            });
+
+            textElement.classList.add('is-hidden');
+            textElement.addEventListener('click', () => textElement.classList.remove('is-hidden'), { once: true });
         } else {
             textElement.textContent = text;
         }
         messageElement.appendChild(textElement);
 
         if (sender === 'ai') {
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'message-buttons';
+
             const playButton = document.createElement('button');
             playButton.textContent = '▶️ 再生';
             playButton.addEventListener('click', () => playAiAudio(text, playButton));
-            messageElement.appendChild(playButton);
+
+            const translateButton = document.createElement('button');
+            translateButton.textContent = '文 翻译';
+            translateButton.addEventListener('click', () => getTranslation(text, messageElement));
+
+            buttonContainer.appendChild(playButton);
+            buttonContainer.appendChild(translateButton);
+            messageElement.appendChild(buttonContainer);
+
+            playAiAudio(text, playButton);
+        }
+        conversationArea.appendChild(messageElement);
+        conversationArea.scrollTop = conversationArea.scrollHeight;
+    }
+
+    async function getTranslation(text, messageElement) {
+        const existingTranslation = messageElement.querySelector('.translation-text');
+        if (existingTranslation) {
+            existingTranslation.style.display = (existingTranslation.style.display === 'none') ? 'block' : 'none';
+            return;
         }
 
-        conversationArea.appendChild(messageElement);
-        conversationArea.scrollTop = conversationArea.scrollHeight; // Auto-scroll
+        try {
+            const response = await fetch('/translate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, model: getModelFor('translation') })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            const translationP = document.createElement('p');
+            translationP.className = 'translation-text';
+            translationP.textContent = data.translated_text;
+            messageElement.appendChild(translationP);
+
+        } catch (error) {
+            console.error("Error fetching translation:", error);
+        }
+    }
+
+    async function showWordCard(token, sentence) {
+        wordCardModal.classList.remove('is-hidden');
+        wordCardTitle.textContent = token.word;
+        wordCardPitch.style.display = 'none';
+        wordCardHiragana.textContent = '加载中...';
+        wordCardPosDetails.innerHTML = '';
+        wordCardContext.textContent = '加载中...';
+        wordCardMeanings.innerHTML = '<li>加载中...</li>';
+
+        currentWordToPronounce = token.word;
+
+        try {
+            const response = await fetch('/explain-word', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    word: token.word,
+                    sentence: sentence,
+                    model: getModelFor('explanation')
+                })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            if (data.pitch_accent !== null && data.pitch_accent !== undefined) {
+                wordCardPitch.textContent = data.pitch_accent;
+                wordCardPitch.style.display = 'inline-flex';
+            }
+            wordCardHiragana.textContent = data.hiragana;
+            data.pos_details.forEach(pos => {
+                const posTag = document.createElement('span');
+                posTag.className = 'pos-detail-item';
+                posTag.textContent = `${pos.pos} (${pos.type}) ${pos.transitivity || ''}`.trim();
+                wordCardPosDetails.appendChild(posTag);
+            });
+
+            wordCardContext.textContent = data.contextual_explanation;
+            wordCardMeanings.innerHTML = '';
+            data.meanings.forEach(meaning => {
+                const meaningDiv = document.createElement('div');
+                meaningDiv.className = 'meaning-group';
+                const definitionP = document.createElement('p');
+                definitionP.innerHTML = `<strong>${meaning.definition}</strong>`;
+                meaningDiv.appendChild(definitionP);
+
+                const exampleUl = document.createElement('ul');
+                meaning.examples.forEach(ex => {
+                    const li = document.createElement('li');
+
+                    const sentenceSpan = document.createElement('span');
+                    ex.tokens.forEach(token => {
+                        if (token.is_kanji) {
+                            const ruby = document.createElement('ruby');
+                            ruby.appendChild(document.createTextNode(token.surface));
+                            const rt = document.createElement('rt');
+                            rt.textContent = token.reading;
+                            ruby.appendChild(rt);
+                            sentenceSpan.appendChild(ruby);
+                        } else {
+                            sentenceSpan.appendChild(document.createTextNode(token.surface));
+                        }
+                    });
+
+                    const translationSpan = document.createElement('span');
+                    translationSpan.className = 'translation';
+                    translationSpan.textContent = ex.translation;
+
+                    li.appendChild(sentenceSpan);
+                    li.appendChild(document.createElement('br'));
+                    li.appendChild(translationSpan);
+                    exampleUl.appendChild(li);
+                });
+                meaningDiv.appendChild(exampleUl);
+                wordCardMeanings.appendChild(meaningDiv);
+            });
+
+        } catch (error) {
+            wordCardContext.textContent = '解释获取失败。';
+            wordCardMeanings.innerHTML = '';
+        }
+    }
+
+    async function punctuateText(text) {
+        if (!text) return "";
+        try {
+            const response = await fetch('/punctuate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, model: getModelFor('formatting') }),
+            });
+            if (!response.ok) return text;
+            const data = await response.json();
+            return data.punctuated_text || text;
+        } catch (error) {
+            return text;
+        }
     }
 
     async function playAiAudio(text, button) {
         if (!text) return;
+        const selectedEngine = document.querySelector('input[name="tts-engine"]:checked').value;
+        const selectedVoice = voiceSelect.value;
+        const cacheKey = `${selectedEngine}-${selectedVoice}-${text}`;
+
+        if (audioCache[cacheKey]) {
+            const audio = new Audio(audioCache[cacheKey]);
+            button.disabled = true;
+            button.textContent = '🔊 再生中...';
+            audio.play();
+            audio.onended = () => {
+                button.disabled = false;
+                button.textContent = '▶️ 再生';
+            };
+            return;
+        }
+
         try {
-            const selectedVoice = voiceSelect.value;
             button.disabled = true;
             button.textContent = '🔊 再生中...';
             const response = await fetch('/synthesize-speech', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, voice_name: selectedVoice }),
+                body: JSON.stringify({
+                    text: text,
+                    engine: selectedEngine,
+                    voice_name: selectedVoice
+                }),
             });
             if (!response.ok) throw new Error(`TTS HTTP error! status: ${response.status}`);
 
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
+            audioCache[cacheKey] = audioUrl;
             const audio = new Audio(audioUrl);
             audio.play();
             audio.onended = () => {
                 button.disabled = false;
                 button.textContent = '▶️ 再生';
-                URL.revokeObjectURL(audioUrl);
             };
         } catch (error) {
-            console.error('Error synthesizing speech:', error);
             button.disabled = false;
             button.textContent = '▶️ 再生';
         }
@@ -165,44 +404,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages }),
+                body: JSON.stringify({ messages: messages, model: getModelFor('conversation') }),
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
-
             messages.push({ role: 'assistant', content: data.text });
-            addMessageToConversation('ai', data.text, data.furigana_html);
-
+            addMessageToConversation('ai', data.text, data.tokens);
         } catch (error) {
-            console.error('Error getting AI response:', error);
             addMessageToConversation('ai', 'すみません、エラーが発生しました。');
         }
     }
 
-    async function getEvaluation(ai_question, user_answer) {
-        scoreValueElement.textContent = '評価中...';
-        suggestionsTextElement.textContent = '評価中...';
+    async function getEvaluation(ai_question, user_answer, messageId) {
         try {
             const response = await fetch('/evaluate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ai_question, user_answer }),
+                body: JSON.stringify({ ai_question, user_answer, model: getModelFor('evaluation') }),
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            scoreValueElement.textContent = `${data.score} / 10`;
-            suggestionsTextElement.textContent = data.suggestions;
-
+            const messageElement = document.getElementById(messageId);
+            const textElement = document.getElementById(`${messageId}-text`);
+            if (messageElement && textElement) {
+                textElement.innerHTML = data.error_html;
+                const feedbackContainer = document.createElement('div');
+                feedbackContainer.className = 'feedback-container';
+                feedbackContainer.innerHTML = `
+                    <div class="feedback-item"><strong>スコア:</strong> <span class="score">${data.score} / 10</span></div>
+                    <div class="feedback-item"><strong>自然な言い方:</strong> <span class="corrected-sentence">${data.corrected_sentence}</span></div>
+                    <div class="feedback-item"><strong>アドバイス:</strong> ${data.explanation}</div>
+                `;
+                messageElement.appendChild(feedbackContainer);
+            }
         } catch (error) {
             console.error('Error getting evaluation:', error);
-            scoreValueElement.textContent = 'エラー';
-            suggestionsTextElement.textContent = '評価の取得中にエラーが発生しました。';
         }
     }
 
     function startConversation() {
-        // Clear initial placeholder message
         conversationArea.innerHTML = '';
         messages = [
             {
@@ -214,5 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Initial Run ---
+    loadSettings();
     startConversation();
 });
