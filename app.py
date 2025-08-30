@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, session, redirect, url_for, abort
 from dotenv import load_dotenv
 import struct
 from io import BytesIO
@@ -14,16 +14,75 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 app = Flask(__name__)
+# Secret for session cookies. In production set FLASK_SECRET (Vercel env).
+app.secret_key = os.environ.get("FLASK_SECRET") or os.urandom(24)
+
+# Simple auth: single password stored in APP_PASSWORD (Vercel env)
+APP_PASSWORD = os.environ.get("APP_PASSWORD")
+
+def is_authenticated() -> bool:
+    return bool(session.get("logged_in"))
+
+def login_required(fn):
+    from functools import wraps
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        # If no APP_PASSWORD configured, treat app as open (useful for local dev)
+        if not APP_PASSWORD:
+            return fn(*args, **kwargs)
+
+        if is_authenticated():
+            return fn(*args, **kwargs)
+
+        # If it's an HTML GET request, redirect to login page
+        if request.method == 'GET' and 'text/html' in (request.headers.get('Accept', '') or ''):
+            return redirect(url_for('login'))
+
+        # Otherwise return a JSON 401 for API calls
+        return jsonify({"error": "Unauthorized"}), 401
+
+    return wrapper
+
+
+@app.context_processor
+def inject_auth_flags():
+    return {"app_password_set": bool(APP_PASSWORD), "logged_in": session.get('logged_in', False)}
 
 # In a real application, you would get the API key from a secure source
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 @app.route('/')
+@login_required
 def index():
     return render_template('index.html')
 
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # If no password configured, redirect to home
+    if not APP_PASSWORD:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        pw = request.form.get('password', '')
+        if pw == APP_PASSWORD:
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='密码错误')
+
+    return render_template('login.html')
+
+
+@app.route('/logout', methods=['POST', 'GET'])
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login') if APP_PASSWORD else url_for('index'))
+
 @app.route('/chat', methods=['POST'])
+@login_required
 def chat():
     """
     Handles chat, cleans response, and performs POS tagging using AI calls.
@@ -122,6 +181,7 @@ Example JSON Output:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/evaluate', methods=['POST'])
+@login_required
 def evaluate():
     """
     Evaluates the user's response using Groq.
@@ -158,6 +218,7 @@ The JSON object must have four keys: "score", "error_html", "corrected_sentence"
         return jsonify({"error": str(e)}), 500
 
 @app.route('/explain-word', methods=['POST'])
+@login_required
 def explain_word():
     """
     Provides a detailed explanation for a word in the context of a sentence.
@@ -226,6 +287,7 @@ Example for an inflected verb like "食べました":
         return jsonify({"error": f"Error explaining word: {str(e)}"}), 500
 
 @app.route('/translate', methods=['POST'])
+@login_required
 def translate():
     """
     Translates a text to Chinese using Groq AI.
@@ -253,6 +315,7 @@ def translate():
 
 
 @app.route('/punctuate', methods=['POST'])
+@login_required
 def punctuate():
     """
     Adds punctuation to a raw text string using Groq AI.
@@ -279,6 +342,7 @@ def punctuate():
         return jsonify({"error": f"Error during punctuation: {str(e)}"}), 500
 
 @app.route('/synthesize-speech', methods=['POST'])
+@login_required
 def synthesize_speech():
     """
     Generates speech from text using either Gemini or gTTS engine.
