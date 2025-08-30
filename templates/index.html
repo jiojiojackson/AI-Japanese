@@ -22,6 +22,15 @@
             </div>
             <div class="header-controls">
                 <button id="open-settings-button" class="settings-btn" aria-label="設定">⚙️</button>
+                {% if app_password_set %}
+                    {% if logged_in %}
+                        <form method="post" action="{{ url_for('logout') }}" style="display:inline">
+                            <button type="submit" class="settings-btn">登出</button>
+                        </form>
+                    {% else %}
+                        <a class="settings-btn" href="{{ url_for('login') }}">登录</a>
+                    {% endif %}
+                {% endif %}
             </div>
         </header>
 

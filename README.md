@@ -68,6 +68,12 @@ This application is configured for easy deployment on [Vercel](https://vercel.co
     During the import process or in your Project Settings, add the following environment variables:
     - **Name**: `GROQ_API_KEY`, **Value**: `your_groq_api_key_here`
     - **Name**: `GEMINI_API_KEY`, **Value**: `your_gemini_api_key_here`
+    
+        Optional (recommended) for simple password protection:
+        - **Name**: `APP_PASSWORD`, **Value**: `a-strong-password`
+            - When `APP_PASSWORD` is set, the app requires users to log in with this single password before accessing the web UI or calling protected API endpoints.
+        - **Name**: `FLASK_SECRET`, **Value**: `a-random-secret-for-sessions`
+            - Used to sign Flask session cookies. If not set, the app will generate a random secret at startup (not suitable for multi-instance production).
 
 4.  **Deploy:**
     Vercel will automatically use the `vercel.json` and `requirements.txt` files to build and deploy your application. Click the "Deploy" button to finish. You will receive a public URL for your live application.
