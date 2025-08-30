@@ -1,5 +1,10 @@
 # 日本語会話チューター / Japanese Speaking Tutor
 
+<img width="1304" height="788" alt="image" src="https://github.com/user-attachments/assets/38684b0f-3183-4fd3-b8b6-073b33d4c6e2" />
+<img width="1305" height="825" alt="image" src="https://github.com/user-attachments/assets/4b0e993b-fc21-4392-b423-3debf38d8479" />
+
+
+
 ## 中文说明（简明）
 这是一个基于 Flask 的小型 Web 应用，用于练习日语会话与发音。主要功能：
 - 与 AI 进行日语对话（chat），生成自然的日文回复并以词为单位展示形态（包含假名/漢字标注）。
