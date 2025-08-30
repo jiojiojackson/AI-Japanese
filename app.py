@@ -185,20 +185,23 @@ The JSON object must have the following keys:
         - `"translation"`: A string in Chinese for the translation.
 
 **Morphological Analysis Rules for `tokens` array:**
-For each token, you must provide: `surface`, `is_kanji` (boolean), and `reading` (Hiragana, if `is_kanji` is true).
+For each token, you must provide:
+- `surface`: The character(s) of the token.
+- `is_kanji`: A boolean, `true` if the surface is Kanji.
+- `reading`: If `is_kanji` is `true`, provide the contextually correct **Hiragana** reading.
 
 Example for an inflected verb like "食べました":
 {
   "pitch_accent": 2,
   "hiragana": "たべました",
   "pos_details": [{"pos": "動詞", "type": "一段・バ行", "transitivity": "他動詞"}],
-  "contextual_explanation": "这是动词 '食べる' 的礼貌体过去式 (ます形 的过去式)。它由 '食べ' + 'ました' 构成。在这个句子中，意为“吃了”。",
+  "contextual_explanation": "这是动词 '食べる' 的礼貌体过去式 (ます形 的过去式)。形变规则为[食べる](原型)->[食べます](ます形)->[食べました](过去式)。在这个句子中，意为“吃了”。",
   "meanings": [
     {
       "definition": "【动词】吃",
       "examples": [
         {
-          "tokens": [{"surface": "朝ご飯", "is_kanji": true, "reading": "あさごはん"}, {"surface": "を", "is_kanji": false}, {"surface": "食", "is_kanji": true, "reading": "た"}, {"surface": "べました", "is_kanji": false}, {"surface": "か", "is_kanji": false}, {"surface": "？", "is_kanji": false}],
+          "tokens": [{"surface": "朝", "is_kanji": true, "reading": "あさ"}, {"surface": "ご", "is_kanji": false},{"surface": "飯", "is_kanji": true, "reading": "はん"},{"surface": "を", "is_kanji": false}, {"surface": "食", "is_kanji": true, "reading": "た"}, {"surface": "べ", "is_kanji": false},{"surface": "ま", "is_kanji": false},{"surface": "し", "is_kanji": false},{"surface": "た", "is_kanji": false}, {"surface": "か", "is_kanji": false}, {"surface": "？", "is_kanji": false}],
           "translation": "你吃早饭了吗？"
         }
       ]
