@@ -177,7 +177,7 @@ The JSON object must have the following keys:
 1.  `"pitch_accent"`: An integer representing the Standard Japanese pitch accent pattern (e.g., 0 for 仕事, 1 for 今日, 2 for 辛い). If unknown, return `null`.
 2.  `"hiragana"`: A string of the word's reading in hiragana.
 3.  `"pos_details"`: An array of objects detailing possible parts of speech.
-4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning in the given sentence.
+4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning in the given sentence. **Crucially, if the word is inflected (not in its dictionary form), you must first state its dictionary form (原形), its current form (e.g., 'て形', 'ます形'), and briefly explain the conjugation rule, before explaining its meaning.**
 5.  `"meanings"`: An array of objects. List all common meanings. Each object must have:
     - `"definition"`: A string in Chinese for the definition.
     - `"examples"`: An array of example objects. Each example object must have:
@@ -185,32 +185,21 @@ The JSON object must have the following keys:
         - `"translation"`: A string in Chinese for the translation.
 
 **Morphological Analysis Rules for `tokens` array:**
-For each token, you must provide:
-- `surface`: The character(s) of the token.
-- `is_kanji`: A boolean, `true` if the surface is Kanji.
-- `reading`: If `is_kanji` is `true`, provide the contextually correct **Hiragana** reading.
+For each token, you must provide: `surface`, `is_kanji` (boolean), and `reading` (Hiragana, if `is_kanji` is true).
 
-Example JSON output for the word "橋":
+Example for an inflected verb like "食べました":
 {
   "pitch_accent": 2,
-  "hiragana": "はし",
-  "pos_details": [{"pos": "名詞", "type": "普通名詞"}],
-  "contextual_explanation": "在 '橋を渡る' 中, '橋' 指的是 '桥梁'。",
+  "hiragana": "たべました",
+  "pos_details": [{"pos": "動詞", "type": "一段・バ行", "transitivity": "他動詞"}],
+  "contextual_explanation": "这是动词 '食べる' 的礼貌体过去式 (ます形 的过去式)。它由 '食べ' + 'ました' 构成。在这个句子中，意为“吃了”。",
   "meanings": [
     {
-      "definition": "【名词】桥，桥梁",
+      "definition": "【动词】吃",
       "examples": [
         {
-          "tokens": [
-            {"surface": "この", "is_kanji": false},
-            {"surface": "橋", "is_kanji": true, "reading": "はし"},
-            {"surface": "は", "is_kanji": false},
-            {"surface": "長", "is_kanji": true, "reading": "なが"},
-            {"surface": "い", "is_kanji": false},
-            {"surface": "です", "is_kanji": false},
-            {"surface": "。", "is_kanji": false}
-          ],
-          "translation": "这座桥很长。"
+          "tokens": [{"surface": "朝ご飯", "is_kanji": true, "reading": "あさごはん"}, {"surface": "を", "is_kanji": false}, {"surface": "食", "is_kanji": true, "reading": "た"}, {"surface": "べました", "is_kanji": false}, {"surface": "か", "is_kanji": false}, {"surface": "？", "is_kanji": false}],
+          "translation": "你吃早饭了吗？"
         }
       ]
     }
