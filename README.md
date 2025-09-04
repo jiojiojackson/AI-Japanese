@@ -35,9 +35,9 @@
    アプリは http://0.0.0.0:5000 で利用可能です。
 
 Vercel 部署（简要步骤）
-1. fork 这个项目
-2. 登陆vercel ，选择这个github 项目部署
-3. 在 Vercel 项目配置環境変数：
+1. 在项目根已包含 vercel.json（本项目使用 @vercel/python ビルド）。
+2. 将代码推到 GitHub。登录 Vercel 并创建新プロジェクト，連携先選擇該倉庫。
+3. 在 Vercel プロジェクト設定中追加環境変数：
    - GROQ_API_KEY
    - GEMINI_API_KEY（若使用 Gemini）
    - FLASK_SECRET

@@ -278,6 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
+            wordCardTitle.textContent = data.dictionary_form || token.word;
+            currentWordToPronounce = data.dictionary_form || token.word;
+
             if (data.pitch_accent !== null && data.pitch_accent !== undefined) {
                 wordCardPitch.textContent = data.pitch_accent;
                 wordCardPitch.style.display = 'inline-flex';
@@ -286,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data.pos_details.forEach(pos => {
                 const posTag = document.createElement('span');
                 posTag.className = 'pos-detail-item';
-                posTag.textContent = `${pos.pos} (${pos.type}) ${pos.transitivity || ''}`.trim();
+                posTag.textContent = pos.pos;
                 wordCardPosDetails.appendChild(posTag);
             });
 
