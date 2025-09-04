@@ -14,6 +14,10 @@
     --border-radius: 0.75rem; /* Slightly larger radius */
 }
 
+.record-btn.is-hidden {
+    display: none;
+}
+
 
 body {
     font-family: var(--font-family-sans);
@@ -108,10 +112,30 @@ h1 { margin: 0; font-weight: 700; }
 .pos-記号, .pos-フィラー, .pos-その他 { color: var(--text-color-muted); }
 
 /* Main Record Button */
-#user-controls { text-align:center; margin-top:8px }
-#record-button { background:var(--primary-color); color:white; border:none; padding:12px 26px; font-size:1.05rem; border-radius:999px; cursor:pointer; box-shadow:0 6px 18px rgba(91,140,255,0.12); transition:transform .12s ease }
-#record-button:hover{ transform:translateY(-3px) }
-#record-button.is-recording{ background:var(--accent-color); box-shadow:0 8px 20px rgba(122,229,130,0.14) }
+#user-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 8px;
+}
+
+.record-btn {
+    color: white;
+    border: none;
+    padding: 12px 26px;
+    font-size: 1.05rem;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(91, 140, 255, 0.12);
+    transition: transform .12s ease;
+}
+.record-btn:hover { transform: translateY(-3px); }
+
+#record-button { background: var(--primary-color); }
+
+#stop-button { background: var(--error-color); }
+#cancel-button { background-color: var(--text-color-muted); }
 
 /* Modals (Settings & Word Card) */
 .settings-btn{ background:transparent; border:1px solid rgba(15,23,36,0.06); width:44px; height:44px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer }
