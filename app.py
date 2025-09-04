@@ -8,6 +8,9 @@ import groq
 from google import genai
 from google.genai import types
 from gtts import gTTS
+import requests
+import urllib.parse
+import unicodedata
 
 # Load environment variables from .env file
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -217,6 +220,75 @@ The JSON object must have four keys: "score", "error_html", "corrected_sentence"
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def lookup_japanese(text):
+    """Perform a full lookup for `text` and return accent and excerpts.
+
+    This single function does URL encoding, the HTTP GET, JSON parsing,
+    title matching, excerpt extraction, and accent calculation.
+
+    Returns: dict {'accent_num': int|None, 'excerpts': [str,...], 'reading': str|None} or None on failure/no-match.
+    """
+    try:
+        quoted = urllib.parse.quote(text)
+        url = f"https://api.mojidict.com/app/mojidict/api/v1/search/all?text={quoted}&types=102&types=106&types=103&types=671&highlight=true"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0'
+        }
+
+        resp = requests.get(url, headers=headers)
+        if resp.status_code != 200:
+            return None
+
+        try:
+            data = resp.json()
+        except Exception:
+            return None
+
+        try:
+            title = data['word']['list'][0]['title']
+        except (TypeError, KeyError, IndexError):
+            return None
+
+        left = title.split('|', 1)[0].strip()
+        if left != text:
+            return None
+        right = title.split('|', 1)[1][:-1].strip()
+
+        node = data['word']['list'][0]
+        raw_excerpts = []
+        for k in ('excerpt', 'excerptB', 'excerptC'):
+            if k in node and node[k]:
+                raw_excerpts.append(node[k])
+
+        excerpts = []
+        for ex in raw_excerpts:
+            try:
+                txt = ex.split(']', 1)[0].strip()[1:]
+            except Exception:
+                txt = ex
+            excerpts.append(txt)
+
+        try:
+            accent_num = int(unicodedata.numeric(title[-1]))
+        except Exception:
+            accent_num = None
+
+        return {'accent_num': accent_num, 'excerpts': excerpts, 'reading': right}
+
+    except requests.exceptions.RequestException:
+        return None
+
 @app.route('/explain-word', methods=['POST'])
 @login_required
 def explain_word():
@@ -235,11 +307,9 @@ You are a Japanese language expert providing detailed data for a language learni
 Your task is to return a single JSON object with no other text. All explanatory text must be in Chinese.
 
 The JSON object must have the following keys:
-1.  `"pitch_accent"`: An integer representing the Standard Japanese pitch accent pattern (e.g., 0 for 仕事, 1 for 今日, 2 for 辛い). If unknown, return `null`.
-2.  `"hiragana"`: A string of the word's reading in hiragana.
-3.  `"pos_details"`: An array of objects detailing possible parts of speech.
-4.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning in the given sentence. **Crucially, if the word is inflected (not in its dictionary form), you must first state its dictionary form (原形), its current form (e.g., 'て形', 'ます形'), and briefly explain the conjugation rule, before explaining its meaning.**
-5.  `"meanings"`: An array of objects. List all common meanings. Each object must have:
+1.  `"dictionary_form"`: A string of the word's dictionary form (原形). For "食べました", this would be "食べる". If the word is already in dictionary form, return the word itself.
+2.  `"contextual_explanation"`: A string in Chinese explaining the word's meaning in the given sentence. **Crucially, if the word is inflected (not in its dictionary form), you must first state its dictionary form (原形), its current form (e.g., 'て形', 'ます形'), and briefly explain the conjugation rule, before explaining its meaning.**
+3.  `"meanings"`: An array of objects. List all common meanings. Each object must have:
     - `"definition"`: A string in Chinese for the definition.
     - `"examples"`: An array of example objects. Each example object must have:
         - `"tokens"`: An array of token objects for the example sentence, following the morphological analysis rules below.
@@ -253,9 +323,7 @@ For each token, you must provide:
 
 Example for an inflected verb like "食べました":
 {
-  "pitch_accent": 2,
-  "hiragana": "たべました",
-  "pos_details": [{"pos": "動詞", "type": "一段・バ行", "transitivity": "他動詞"}],
+  "dictionary_form": "食べる",
   "contextual_explanation": "这是动词 '食べる' 的礼貌体过去式 (ます形 的过去式)。形变规则为[食べる](原型)->[食べます](ます形)->[食べました](过去式)。在这个句子中，意为“吃了”。",
   "meanings": [
     {
@@ -282,6 +350,23 @@ Example for an inflected verb like "食べました":
             ]
         )
         explanation_data = json.loads(chat_completion.choices[0].message.content)
+
+        dictionary_form = explanation_data.get("dictionary_form")
+        if dictionary_form:
+            lookup_result = lookup_japanese(dictionary_form)
+            if lookup_result:
+                explanation_data['pitch_accent'] = lookup_result.get('accent_num')
+                explanation_data['hiragana'] = lookup_result.get('reading')
+                if lookup_result.get('excerpts'):
+                    pos_details = [{"pos": p} for p in lookup_result['excerpts']]
+                    if pos_details:
+                        explanation_data['pos_details'] = pos_details
+            else:
+                # Add default null values if lookup fails
+                explanation_data['pitch_accent'] = None
+                explanation_data['hiragana'] = None
+                explanation_data['pos_details'] = []
+
         return jsonify(explanation_data)
     except Exception as e:
         return jsonify({"error": f"Error explaining word: {str(e)}"}), 500
