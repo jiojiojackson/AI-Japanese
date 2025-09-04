@@ -278,6 +278,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
+            wordCardTitle.textContent = data.dictionary_form || token.word;
+            currentWordToPronounce = data.dictionary_form || token.word;
+
             if (data.pitch_accent !== null && data.pitch_accent !== undefined) {
                 wordCardPitch.textContent = data.pitch_accent;
                 wordCardPitch.style.display = 'inline-flex';
