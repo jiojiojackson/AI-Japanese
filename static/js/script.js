@@ -286,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data.pos_details.forEach(pos => {
                 const posTag = document.createElement('span');
                 posTag.className = 'pos-detail-item';
-                posTag.textContent = `${pos.pos} (${pos.type}) ${pos.transitivity || ''}`.trim();
+                posTag.textContent = pos.pos;
                 wordCardPosDetails.appendChild(posTag);
             });
 
