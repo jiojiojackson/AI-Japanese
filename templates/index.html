@@ -71,9 +71,12 @@
         </main>
 
         <div id="user-controls">
-            <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音開始">🎤 録音開始</button>
-            <button id="stop-button" class="record-btn is-hidden" aria-label="録音停止">⏹️ 録音停止</button>
-            <button id="cancel-button" class="record-btn is-hidden" aria-label="録音キャンセル">❌ キャンセル</button>
+            <p id="real-time-transcript" class="is-hidden" aria-live="polite"></p>
+            <div class="user-controls-buttons">
+                <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音開始">🎤 録音開始</button>
+                <button id="stop-button" class="record-btn is-hidden" aria-label="録音停止">⏹️ 録音停止</button>
+                <button id="cancel-button" class="record-btn is-hidden" aria-label="録音キャンセル">❌ キャンセル</button>
+            </div>
         </div>
 
     </div>

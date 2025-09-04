@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopButton = document.getElementById('stop-button');
     const cancelButton = document.getElementById('cancel-button');
     const conversationArea = document.getElementById('conversation-area');
+    const realTimeTranscript = document.getElementById('real-time-transcript');
 
     // Settings Modal Elements
     const openSettingsButton = document.getElementById('open-settings-button');
@@ -72,12 +73,22 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.interimResults = true;
 
         recognition.onresult = (event) => {
-            finalTranscript = "";
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
+            let interim_transcript = '';
+            let final_transcript_for_display = '';
+            // finalTranscript is the global variable holding the truly final transcript
+            finalTranscript = '';
+
+            for (let i = 0; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
                     finalTranscript += event.results[i][0].transcript;
+                    final_transcript_for_display += event.results[i][0].transcript;
+                } else {
+                    interim_transcript += event.results[i][0].transcript;
                 }
             }
+
+            // Update the UI with the latest transcript
+            realTimeTranscript.innerHTML = final_transcript_for_display + `<span class="interim-text">${interim_transcript}</span>`;
         };
 
         recognition.onend = async () => {
@@ -85,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
             recordButton.classList.remove('is-hidden');
             stopButton.classList.add('is-hidden');
             cancelButton.classList.add('is-hidden');
+            realTimeTranscript.classList.add('is-hidden');
 
             if (isRecording) {
                 isRecording = false;
@@ -99,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     getAiResponse();
                     getEvaluation(lastAiQuestion, punctuatedAnswer, messageId);
                 }
-                finalTranscript = "";
+                // finalTranscript is already finalized, no need to reset here
             }
         };
 
@@ -139,6 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function startRecording() {
         if (recognition && !isRecording) {
             finalTranscript = "";
+            realTimeTranscript.textContent = "聞き取り中...";
+            realTimeTranscript.classList.remove('is-hidden');
             isRecording = true;
             recognition.start();
             recordButton.classList.add('is-hidden');
@@ -150,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function stopRecording() {
         if (recognition && isRecording) {
             recognition.stop();
+            // The onend event will handle hiding the transcript box
         }
     }
 
@@ -157,6 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (recognition && isRecording) {
             isRecording = false; // Prevent processing in onend
             recognition.abort();
+            // abort() doesn't always fire onend, so hide manually
+            realTimeTranscript.classList.add('is-hidden');
+            finalTranscript = "";
         }
     }
 

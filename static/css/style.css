@@ -114,10 +114,41 @@ h1 { margin: 0; font-weight: 700; }
 /* Main Record Button */
 #user-controls {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: 1rem;
     margin-top: 8px;
+}
+
+#real-time-transcript {
+    margin: 0;
+    padding: 10px 15px;
+    background-color: #f1f1f1;
+    border-radius: 8px;
+    min-height: 1.5em;
+    width: 80%;
+    max-width: 600px;
+    color: #333;
+    font-size: 1rem;
+    text-align: center;
+    line-height: 1.5;
+    transition: all 0.2s ease-in-out;
+}
+
+#real-time-transcript:not(.is-hidden) {
+    margin-bottom: 15px;
+}
+
+#real-time-transcript .interim-text {
+    color: #888;
+}
+
+.user-controls-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
 }
 
 .record-btn {
