@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const recordButton = document.getElementById('record-button');
+    const stopButton = document.getElementById('stop-button');
+    const cancelButton = document.getElementById('cancel-button');
     const conversationArea = document.getElementById('conversation-area');
 
     // Settings Modal Elements
@@ -79,10 +81,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         recognition.onend = async () => {
+            // Reset button visibility first
+            recordButton.classList.remove('is-hidden');
+            stopButton.classList.add('is-hidden');
+            cancelButton.classList.add('is-hidden');
+
             if (isRecording) {
                 isRecording = false;
-                recordButton.textContent = '🎤 録音開始';
-                recordButton.classList.remove('is-recording');
                 const rawUserAnswer = finalTranscript.trim();
 
                 if (rawUserAnswer) {
@@ -99,9 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         recognition.onerror = (event) => {
-            isRecording = false;
-            recordButton.textContent = '🎤 録音開始';
-            recordButton.classList.remove('is-recording');
+            console.error('Speech recognition error:', event.error);
+            isRecording = false; // Ensure we stop processing
         };
     } else {
         recordButton.disabled = true;
@@ -123,13 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
         modelSelects[key].addEventListener('change', saveSettings);
     }
 
-    recordButton.addEventListener('click', () => {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
-    });
+    recordButton.addEventListener('click', startRecording);
+    stopButton.addEventListener('click', stopRecording);
+    cancelButton.addEventListener('click', cancelRecording);
 
     ttsEngineSelect.addEventListener('change', (e) => {
         geminiVoiceSettings.style.display = (e.target.value === 'gemini') ? 'block' : 'none';
@@ -141,14 +141,22 @@ document.addEventListener('DOMContentLoaded', () => {
             finalTranscript = "";
             isRecording = true;
             recognition.start();
-            recordButton.textContent = '⏹️ 録音停止';
-            recordButton.classList.add('is-recording');
+            recordButton.classList.add('is-hidden');
+            stopButton.classList.remove('is-hidden');
+            cancelButton.classList.remove('is-hidden');
         }
     }
 
     function stopRecording() {
         if (recognition && isRecording) {
             recognition.stop();
+        }
+    }
+
+    function cancelRecording() {
+        if (recognition && isRecording) {
+            isRecording = false; // Prevent processing in onend
+            recognition.abort();
         }
     }
 
