@@ -14,8 +14,8 @@
     --border-radius: 0.75rem; /* Slightly larger radius */
 }
 
-.is-hidden {
-    display: none !important;
+.record-btn.is-hidden {
+    display: none;
 }
 
 
