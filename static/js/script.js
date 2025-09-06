@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsModal = document.getElementById('settings-modal');
     const modelSelects = {
         conversation: document.getElementById('model-select-conversation'),
+        analysis: document.getElementById('model-select-analysis'),
         evaluation: document.getElementById('model-select-evaluation'),
         explanation: document.getElementById('model-select-explanation'),
         formatting: document.getElementById('model-select-formatting'),
@@ -61,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function loadSettings() {
         modelSelects.conversation.value = localStorage.getItem('settings-model-conversation') || 'openai/gpt-oss-120b';
+        modelSelects.analysis.value = localStorage.getItem('settings-model-analysis') || 'openai/gpt-oss-120b';
         modelSelects.evaluation.value = localStorage.getItem('settings-model-evaluation') || 'openai/gpt-oss-120b';
         modelSelects.explanation.value = localStorage.getItem('settings-model-explanation') || 'openai/gpt-oss-120b';
         modelSelects.formatting.value = localStorage.getItem('settings-model-formatting') || 'openai/gpt-oss-20b';
@@ -250,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, model: getModelFor('conversation') })
+                body: JSON.stringify({ text: text, model: getModelFor('analysis') })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);

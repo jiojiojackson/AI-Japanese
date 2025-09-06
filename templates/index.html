@@ -101,8 +101,15 @@
         <div class="modal-content">
             <h2>設定 (Settings)</h2>
             <div class="setting-item">
-                <label for="model-select-conversation">会話・分析モデル:</label>
+                <label for="model-select-conversation">会話モデル (Conversation Model):</label>
                 <select id="model-select-conversation">
+                    <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
+                    <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="model-select-analysis">分析モデル (Analysis Model):</label>
+                <select id="model-select-analysis">
                     <option value="openai/gpt-oss-120b">GPT-OSS-120b</option>
                     <option value="openai/gpt-oss-20b">GPT-OSS-20b</option>
                 </select>
