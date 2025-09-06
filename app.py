@@ -56,65 +56,7 @@ def inject_auth_flags():
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 
-@app.route('/')
-@login_required
-def index():
-    return render_template('index.html')
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    # If no password configured, redirect to home
-    if not APP_PASSWORD:
-        return redirect(url_for('index'))
-
-    if request.method == 'POST':
-        pw = request.form.get('password', '')
-        if pw == APP_PASSWORD:
-            session['logged_in'] = True
-            return redirect(url_for('index'))
-        else:
-            return render_template('login.html', error='密码错误')
-
-    return render_template('login.html')
-
-
-@app.route('/logout', methods=['POST', 'GET'])
-def logout():
-    session.pop('logged_in', None)
-    return redirect(url_for('login') if APP_PASSWORD else url_for('index'))
-
-@app.route('/chat', methods=['POST'])
-@login_required
-def chat():
-    """
-    Handles chat, cleans response, and performs POS tagging using AI calls.
-    """
-    messages = request.json.get('messages')
-    model = request.json.get('model', DEFAULT_MODEL)
-    if not messages:
-        return jsonify({"error": "No messages provided"}), 400
-
-    try:
-        # Step 1: Get the initial conversational response
-        initial_completion = groq_client.chat.completions.create(
-            messages=messages, model=model
-        )
-        raw_ai_text = initial_completion.choices[0].message.content
-
-        # Step 2: Clean the response using a second AI call
-        cleanup_prompt = "Reformat the following text into a simple, natural paragraph of Japanese. Remove markdown (like `**`, `*`, `1.`, `-`), fix repeated punctuation, and ensure it reads like a natural spoken response. Output only the cleaned text."
-        cleanup_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": cleanup_prompt},
-                {"role": "user", "content": raw_ai_text}
-            ],
-            model=model,
-        )
-        cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
-
-        # Step 3: Perform POS tagging using a third AI call
-        pos_prompt = """
+POS_PROMPT = """
 You are a Japanese morphological analysis expert. Your task is to process a Japanese sentence and return a structured JSON object representing the analysis.
 The JSON object must be an array of "words". Each "word" object in the array contains the part-of-speech (`pos`) for the whole word, and a `word_tokens` array detailing its components.
 
@@ -159,26 +101,114 @@ Example JSON Output:
   ]
 }
 """
-        pos_completion = groq_client.chat.completions.create(
+
+def analyze_text_for_pos(text_to_analyze: str, model: str) -> dict:
+    """Helper function to run POS analysis on a string."""
+    pos_completion = groq_client.chat.completions.create(
+        messages=[
+            {"role": "system", "content": POS_PROMPT},
+            {"role": "user", "content": text_to_analyze}
+        ],
+        model=model,
+        response_format={"type": "json_object"},
+    )
+    pos_data = json.loads(pos_completion.choices[0].message.content)
+    analyzed_tokens = pos_data.get("result", [])
+    return {"text": text_to_analyze, "tokens": analyzed_tokens}
+
+
+@app.route('/')
+@login_required
+def index():
+    return render_template('index.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # If no password configured, redirect to home
+    if not APP_PASSWORD:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        pw = request.form.get('password', '')
+        if pw == APP_PASSWORD:
+            session['logged_in'] = True
+            return redirect(url_for('index'))
+        else:
+            return render_template('login.html', error='密码错误')
+
+    return render_template('login.html')
+
+
+@app.route('/logout', methods=['POST', 'GET'])
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login') if APP_PASSWORD else url_for('index'))
+
+
+@app.route('/get-presets')
+@login_required
+def get_presets():
+    try:
+        # Presets are in the root directory of the app
+        presets_path = os.path.join(app.root_path, 'presets.json')
+        with open(presets_path, 'r', encoding='utf-8') as f:
+            presets = json.load(f)
+        return jsonify(presets)
+    except FileNotFoundError:
+        return jsonify({"error": "Presets file not found."}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/chat', methods=['POST'])
+@login_required
+def chat():
+    """
+    Handles chat, cleans response, and performs POS tagging using AI calls.
+    Can also be used to initialize a chat by analyzing a preset starting prompt.
+    """
+    messages = request.json.get('messages')
+    model = request.json.get('model', DEFAULT_MODEL)
+    starting_prompt = request.json.get('starting_prompt')
+
+    # If starting a new conversation, just analyze the provided starting prompt
+    if starting_prompt and (not messages or len(messages) <= 1):
+        try:
+            analysis_result = analyze_text_for_pos(starting_prompt, model)
+            if not analysis_result.get("tokens"):
+                 return jsonify({"text": starting_prompt, "tokens": [{"word": starting_prompt, "furigana": "", "pos": "その他"}]})
+            return jsonify(analysis_result)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    if not messages:
+        return jsonify({"error": "No messages provided"}), 400
+
+    try:
+        # Step 1: Get the initial conversational response
+        initial_completion = groq_client.chat.completions.create(
+            messages=messages, model=model
+        )
+        raw_ai_text = initial_completion.choices[0].message.content
+
+        # Step 2: Clean the response using a second AI call
+        cleanup_prompt = "Reformat the following text into a simple, natural paragraph of Japanese. Remove markdown (like `**`, `*`, `1.`, `-`), fix repeated punctuation, and ensure it reads like a natural spoken response. Output only the cleaned text."
+        cleanup_completion = groq_client.chat.completions.create(
             messages=[
-                {"role": "system", "content": pos_prompt},
-                {"role": "user", "content": cleaned_ai_text}
+                {"role": "system", "content": cleanup_prompt},
+                {"role": "user", "content": raw_ai_text}
             ],
             model=model,
-            response_format={"type": "json_object"},
         )
-        pos_data = json.loads(pos_completion.choices[0].message.content)
-        # The new structure is nested under a "result" key in the example prompt.
-        analyzed_tokens = pos_data.get("result", [])
+        cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
 
-        if not analyzed_tokens:
+        # Step 3: Perform POS tagging
+        analysis_result = analyze_text_for_pos(cleaned_ai_text, model)
+        if not analysis_result.get("tokens"):
              return jsonify({"text": cleaned_ai_text, "tokens": [{"word": cleaned_ai_text, "furigana": "", "pos": "その他"}]})
 
-        response_data = {
-            "text": cleaned_ai_text,
-            "tokens": analyzed_tokens
-        }
-        return jsonify(response_data)
+        return jsonify(analysis_result)
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

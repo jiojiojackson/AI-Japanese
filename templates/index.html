@@ -58,19 +58,11 @@
             </div>
         </div>
 
-        <main id="conversation-area" role="region" aria-label="会話履歴">
+        <main id="conversation-area" role="region" aria-label="会話履歴" class="is-hidden">
             <!-- Messages will be appended here -->
-            <div class="message ai-message">
-                <p class="speaker">AI:</p>
-                <div class="text-content" id="ai-text">
-                    <!-- AI's furigana text will go here -->
-                    <ruby>今日<rt>きょう</rt></ruby>は<ruby>天気<rt>てんき</rt></ruby>がいいですね。
-                </div>
-                <button id="play-button" class="play-btn" disabled aria-label="AI の発話を再生">▶️ 再生</button>
-            </div>
         </main>
 
-        <div id="user-controls">
+        <div id="user-controls" class="is-hidden">
             <p id="real-time-transcript" class="is-hidden" aria-live="polite"></p>
             <div class="user-controls-buttons">
                 <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音開始">🎤 録音開始</button>
@@ -82,6 +74,27 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <!-- Preset Selection Modal -->
+    <div id="preset-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>新しい会話を始める</h2>
+            <p>まず、AIのキャラクターと話したいトピックを選んでください。</p>
+            <div class="setting-item">
+                <label for="persona-select">キャラクター:</label>
+                <select id="persona-select">
+                    <!-- Options will be populated by JS -->
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="topic-select">トピック:</label>
+                <select id="topic-select">
+                    <!-- Options will be populated by JS -->
+                </select>
+            </div>
+            <button id="start-chat-button">会話を始める</button>
+        </div>
+    </div>
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal-overlay is-hidden">

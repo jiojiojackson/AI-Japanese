@@ -4,7 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopButton = document.getElementById('stop-button');
     const cancelButton = document.getElementById('cancel-button');
     const conversationArea = document.getElementById('conversation-area');
+    const userControls = document.getElementById('user-controls');
     const realTimeTranscript = document.getElementById('real-time-transcript');
+
+    // Preset Modal Elements
+    const presetModal = document.getElementById('preset-modal');
+    const personaSelect = document.getElementById('persona-select');
+    const topicSelect = document.getElementById('topic-select');
+    const startChatButton = document.getElementById('start-chat-button');
 
     // Settings Modal Elements
     const openSettingsButton = document.getElementById('open-settings-button');
@@ -43,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let audioCache = {};
     let messageIdCounter = 0;
     let currentWordToPronounce = '';
+    let presets = [];
 
     // --- Settings Logic ---
     function saveSettings() {
@@ -75,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onresult = (event) => {
             let interim_transcript = '';
             let final_transcript_for_display = '';
-            // finalTranscript is the global variable holding the truly final transcript
             finalTranscript = '';
 
             for (let i = 0; i < event.results.length; ++i) {
@@ -86,13 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     interim_transcript += event.results[i][0].transcript;
                 }
             }
-
-            // Update the UI with the latest transcript
             realTimeTranscript.innerHTML = final_transcript_for_display + `<span class="interim-text">${interim_transcript}</span>`;
         };
 
         recognition.onend = async () => {
-            // Reset button visibility first
             recordButton.classList.remove('is-hidden');
             stopButton.classList.add('is-hidden');
             cancelButton.classList.add('is-hidden');
@@ -111,13 +115,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     getAiResponse();
                     getEvaluation(lastAiQuestion, punctuatedAnswer, messageId);
                 }
-                // finalTranscript is already finalized, no need to reset here
             }
         };
 
         recognition.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
-            isRecording = false; // Ensure we stop processing
+            isRecording = false;
         };
     } else {
         recordButton.disabled = true;
@@ -147,6 +150,16 @@ document.addEventListener('DOMContentLoaded', () => {
         geminiVoiceSettings.style.display = (e.target.value === 'gemini') ? 'block' : 'none';
     });
 
+    personaSelect.addEventListener('change', () => {
+        const selectedPersona = presets.find(p => p.persona === personaSelect.value);
+        if (selectedPersona) {
+            populateTopics(selectedPersona.topics);
+        }
+    });
+
+    startChatButton.addEventListener('click', startConversation);
+
+
     // --- Functions ---
     function startRecording() {
         if (recognition && !isRecording) {
@@ -164,15 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function stopRecording() {
         if (recognition && isRecording) {
             recognition.stop();
-            // The onend event will handle hiding the transcript box
         }
     }
 
     function cancelRecording() {
         if (recognition && isRecording) {
-            isRecording = false; // Prevent processing in onend
+            isRecording = false;
             recognition.abort();
-            // abort() doesn't always fire onend, so hide manually
             realTimeTranscript.classList.add('is-hidden');
             finalTranscript = "";
         }
@@ -194,7 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sender === 'ai') {
             lastAiQuestion = text;
-            // Build the rich text display from the new nested token structure
             tokens.forEach(word => {
                 const wordSpan = document.createElement('span');
                 wordSpan.classList.add('pos-token', `pos-${word.pos}`);
@@ -212,12 +222,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                // Add click listener for the word card to the entire word span
                 wordSpan.style.cursor = 'pointer';
                 wordSpan.addEventListener('click', (event) => {
                     if (textElement.classList.contains('is-hidden')) return;
                     event.stopPropagation();
-                    // Reconstruct the word surface for the explanation call
                     const surfaceWord = word.word_tokens.map(t => t.surface).join('');
                     showWordCard({ word: surfaceWord }, text);
                 });
@@ -472,18 +480,82 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function startConversation() {
-        conversationArea.innerHTML = '';
-        messages = [
-            {
-                role: "system",
-                content: "You are a friendly Japanese conversation partner. Start the conversation with a simple, common question in Japanese. Keep your responses concise."
+    async function startConversation() {
+        const selectedPersonaName = personaSelect.value;
+        const selectedTopicName = topicSelect.value;
+
+        const persona = presets.find(p => p.persona === selectedPersonaName);
+        if (!persona) return;
+
+        const topic = persona.topics.find(t => t.name === selectedTopicName);
+        if (!topic) return;
+
+        startChatButton.disabled = true;
+        startChatButton.textContent = '準備中...';
+
+        const systemPrompt = persona.prompt_template.replace('{topic}', topic.name);
+        messages = [{ role: 'system', content: systemPrompt }];
+
+        try {
+            const response = await fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    starting_prompt: topic.starting_prompt,
+                    model: getModelFor('conversation')
+                }),
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            messages.push({ role: 'assistant', content: data.text });
+
+            presetModal.classList.add('is-hidden');
+            conversationArea.classList.remove('is-hidden');
+            userControls.classList.remove('is-hidden');
+
+            conversationArea.innerHTML = '';
+            addMessageToConversation('ai', data.text, data.tokens);
+
+        } catch (error) {
+            alert(`会話の開始に失敗しました: ${error.message}`);
+            startChatButton.disabled = false;
+            startChatButton.textContent = '会話を始める';
+        }
+    }
+
+    function populateTopics(topics) {
+        topicSelect.innerHTML = '';
+        topics.forEach(topic => {
+            const option = document.createElement('option');
+            option.value = topic.name;
+            option.textContent = topic.name;
+            topicSelect.appendChild(option);
+        });
+    }
+
+    async function initializeApp() {
+        loadSettings();
+        try {
+            const response = await fetch('/get-presets');
+            presets = await response.json();
+            if (presets && presets.length > 0) {
+                presets.forEach(preset => {
+                    const option = document.createElement('option');
+                    option.value = preset.persona;
+                    option.textContent = preset.persona;
+                    personaSelect.appendChild(option);
+                });
+                // Initial population of topics
+                populateTopics(presets[0].topics);
             }
-        ];
-        getAiResponse();
+        } catch (error) {
+            console.error("Failed to load presets:", error);
+            presetModal.innerHTML = '<p>会話プリセットの読み込みに失敗しました。ページを再読み込みしてください。</p>';
+        }
     }
 
     // --- Initial Run ---
-    loadSettings();
-    startConversation();
+    initializeApp();
 });
