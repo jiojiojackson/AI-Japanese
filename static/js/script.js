@@ -208,6 +208,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (sender === 'ai') {
             lastAiQuestion = text;
+
+            // Hide the text and add a click listener to reveal it
+            textElement.classList.add('is-hidden');
+            textElement.addEventListener('click', () => textElement.classList.remove('is-hidden'), { once: true });
+
             const buttonContainer = document.createElement('div');
             buttonContainer.className = 'message-buttons';
 
@@ -221,7 +226,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const analyzeButton = document.createElement('button');
             analyzeButton.textContent = '分析';
-            analyzeButton.addEventListener('click', () => handleAnalysisClick(text, textElement, analyzeButton));
+            analyzeButton.addEventListener('click', (event) => {
+                // Prevent the click from bubbling up to the textElement and revealing it
+                event.stopPropagation();
+                handleAnalysisClick(text, textElement, analyzeButton);
+            });
 
             buttonContainer.appendChild(playButton);
             buttonContainer.appendChild(translateButton);
