@@ -93,6 +93,7 @@ h1 { margin: 0; font-weight: 700; }
 .message-buttons { margin-top:0.5rem; display:flex; gap:0.5rem }
 .message-buttons button{ background:transparent; border:1px solid rgba(15,23,36,0.06); padding:6px 10px; border-radius:10px; cursor:pointer }
 .message-buttons button:hover{ background:rgba(91,140,255,0.06) }
+.message-buttons button.is-hidden { display: none; }
 
 /* FIX: Translation text styling */
 .translation-text{ font-size:0.95rem; color:var(--text-color-main); margin-top:10px; padding:10px; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:8px }
