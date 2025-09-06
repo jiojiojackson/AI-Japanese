@@ -165,23 +165,10 @@ def get_presets():
 @login_required
 def chat():
     """
-    Handles chat, cleans response, and performs POS tagging using AI calls.
-    Can also be used to initialize a chat by analyzing a preset starting prompt.
+    Handles generating a conversational response from the AI.
     """
     messages = request.json.get('messages')
     model = request.json.get('model', DEFAULT_MODEL)
-    starting_prompt = request.json.get('starting_prompt')
-
-    # If starting a new conversation, just analyze the provided starting prompt
-    if starting_prompt and (not messages or len(messages) <= 1):
-        try:
-            analysis_result = analyze_text_for_pos(starting_prompt, model)
-            if not analysis_result.get("tokens"):
-                 return jsonify({"text": starting_prompt, "tokens": [{"word": starting_prompt, "furigana": "", "pos": "その他"}]})
-            return jsonify(analysis_result)
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
     if not messages:
         return jsonify({"error": "No messages provided"}), 400
 
@@ -203,13 +190,28 @@ def chat():
         )
         cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
 
-        # Step 3: Perform POS tagging
-        analysis_result = analyze_text_for_pos(cleaned_ai_text, model)
+        return jsonify({"text": cleaned_ai_text})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/analyze', methods=['POST'])
+@login_required
+def analyze():
+    """
+    Performs Part-of-Speech (POS) analysis on a given text string.
+    """
+    text = request.json.get('text')
+    model = request.json.get('model', DEFAULT_MODEL)
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    try:
+        analysis_result = analyze_text_for_pos(text, model)
         if not analysis_result.get("tokens"):
-             return jsonify({"text": cleaned_ai_text, "tokens": [{"word": cleaned_ai_text, "furigana": "", "pos": "その他"}]})
-
+             return jsonify({"text": text, "tokens": [{"word": text, "furigana": "", "pos": "その他"}]})
         return jsonify(analysis_result)
-
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

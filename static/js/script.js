@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const messageId = `user-message-${messageIdCounter++}`;
                     const punctuatedAnswer = await punctuateText(rawUserAnswer);
 
-                    addMessageToConversation('user', punctuatedAnswer, null, messageId);
+                    addMessageToConversation('user', punctuatedAnswer, messageId);
                     messages.push({ role: 'user', content: punctuatedAnswer });
                     getAiResponse();
                     getEvaluation(lastAiQuestion, punctuatedAnswer, messageId);
@@ -189,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function addMessageToConversation(sender, text, tokens = null, messageId = null) {
+    function addMessageToConversation(sender, text, messageId = null) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
         if (messageId) messageElement.id = messageId;
@@ -202,10 +202,53 @@ document.addEventListener('DOMContentLoaded', () => {
         const textElement = document.createElement('div');
         textElement.classList.add('text-content');
         if (messageId) textElement.id = `${messageId}-text`;
+        textElement.textContent = text; // Always start with plain text
+
+        messageElement.appendChild(textElement);
 
         if (sender === 'ai') {
             lastAiQuestion = text;
-            tokens.forEach(word => {
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'message-buttons';
+
+            const playButton = document.createElement('button');
+            playButton.textContent = '▶️ 再生';
+            playButton.addEventListener('click', () => playAiAudio(text, playButton));
+
+            const translateButton = document.createElement('button');
+            translateButton.textContent = '文 翻译';
+            translateButton.addEventListener('click', () => getTranslation(text, messageElement));
+
+            const analyzeButton = document.createElement('button');
+            analyzeButton.textContent = '分析';
+            analyzeButton.addEventListener('click', () => handleAnalysisClick(text, textElement, analyzeButton));
+
+            buttonContainer.appendChild(playButton);
+            buttonContainer.appendChild(translateButton);
+            buttonContainer.appendChild(analyzeButton);
+            messageElement.appendChild(buttonContainer);
+
+            playAiAudio(text, playButton);
+        }
+        conversationArea.appendChild(messageElement);
+        conversationArea.scrollTop = conversationArea.scrollHeight;
+    }
+
+    async function handleAnalysisClick(text, textElement, button) {
+        button.disabled = true;
+        button.textContent = '分析中...';
+        try {
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text, model: getModelFor('conversation') })
+            });
+            const data = await response.json();
+            if (data.error) throw new Error(data.error);
+
+            // Re-render the textElement with tokens
+            textElement.innerHTML = ''; // Clear the plain text
+            data.tokens.forEach(word => {
                 const wordSpan = document.createElement('span');
                 wordSpan.classList.add('pos-token', `pos-${word.pos}`);
 
@@ -224,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 wordSpan.style.cursor = 'pointer';
                 wordSpan.addEventListener('click', (event) => {
-                    if (textElement.classList.contains('is-hidden')) return;
                     event.stopPropagation();
                     const surfaceWord = word.word_tokens.map(t => t.surface).join('');
                     showWordCard({ word: surfaceWord }, text);
@@ -232,35 +274,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 textElement.appendChild(wordSpan);
             });
-
-            textElement.classList.add('is-hidden');
-            textElement.addEventListener('click', () => textElement.classList.remove('is-hidden'), { once: true });
-        } else {
-            textElement.textContent = text;
+            button.classList.add('is-hidden'); // Hide button after analysis
+        } catch (error) {
+            console.error("Error fetching analysis:", error);
+            button.disabled = false;
+            button.textContent = '分析';
         }
-        messageElement.appendChild(textElement);
-
-        if (sender === 'ai') {
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'message-buttons';
-
-            const playButton = document.createElement('button');
-            playButton.textContent = '▶️ 再生';
-            playButton.addEventListener('click', () => playAiAudio(text, playButton));
-
-            const translateButton = document.createElement('button');
-            translateButton.textContent = '文 翻译';
-            translateButton.addEventListener('click', () => getTranslation(text, messageElement));
-
-            buttonContainer.appendChild(playButton);
-            buttonContainer.appendChild(translateButton);
-            messageElement.appendChild(buttonContainer);
-
-            playAiAudio(text, playButton);
-        }
-        conversationArea.appendChild(messageElement);
-        conversationArea.scrollTop = conversationArea.scrollHeight;
     }
+
 
     async function getTranslation(text, messageElement) {
         const existingTranslation = messageElement.querySelector('.translation-text');
@@ -446,7 +467,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
             messages.push({ role: 'assistant', content: data.text });
-            addMessageToConversation('ai', data.text, data.tokens);
+            addMessageToConversation('ai', data.text);
         } catch (error) {
             addMessageToConversation('ai', 'すみません、エラーが発生しました。');
         }
@@ -480,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function startConversation() {
+    function startConversation() {
         const selectedPersonaName = personaSelect.value;
         const selectedTopicName = topicSelect.value;
 
@@ -490,39 +511,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const topic = persona.topics.find(t => t.name === selectedTopicName);
         if (!topic) return;
 
-        startChatButton.disabled = true;
-        startChatButton.textContent = '準備中...';
-
         const systemPrompt = persona.prompt_template.replace('{topic}', topic.name);
-        messages = [{ role: 'system', content: systemPrompt }];
+        messages = [
+            { role: 'system', content: systemPrompt },
+            { role: 'assistant', content: topic.starting_prompt }
+        ];
 
-        try {
-            const response = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    starting_prompt: topic.starting_prompt,
-                    model: getModelFor('conversation')
-                }),
-            });
+        presetModal.classList.add('is-hidden');
+        conversationArea.classList.remove('is-hidden');
+        userControls.classList.remove('is-hidden');
 
-            const data = await response.json();
-            if (data.error) throw new Error(data.error);
-
-            messages.push({ role: 'assistant', content: data.text });
-
-            presetModal.classList.add('is-hidden');
-            conversationArea.classList.remove('is-hidden');
-            userControls.classList.remove('is-hidden');
-
-            conversationArea.innerHTML = '';
-            addMessageToConversation('ai', data.text, data.tokens);
-
-        } catch (error) {
-            alert(`会話の開始に失敗しました: ${error.message}`);
-            startChatButton.disabled = false;
-            startChatButton.textContent = '会話を始める';
-        }
+        conversationArea.innerHTML = '';
+        addMessageToConversation('ai', topic.starting_prompt);
     }
 
     function populateTopics(topics) {
