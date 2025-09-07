@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordSpan.addEventListener('click', (event) => {
                     event.stopPropagation();
                     const surfaceWord = word.word_tokens.map(t => t.surface).join('');
-                    showWordCard({ word: surfaceWord }, fullOriginalText);
+                    showWordCard({ word: surfaceWord }, sentenceText);
                 });
                 sentenceElement.appendChild(wordSpan);
             });
