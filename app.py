@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from flask import Flask, request, jsonify, render_template, send_file, session, redirect, url_for, abort
 from dotenv import load_dotenv
 import struct
@@ -201,6 +202,7 @@ def chat():
 def analyze():
     """
     Performs Part-of-Speech (POS) analysis on a given text string.
+    Can handle multiple sentences.
     """
     text = request.json.get('text')
     model = request.json.get('model', DEFAULT_MODEL)
@@ -208,11 +210,40 @@ def analyze():
         return jsonify({"error": "No text provided"}), 400
 
     try:
-        analysis_result = analyze_text_for_pos(text, model)
-        if not analysis_result.get("tokens"):
+        # Split text into sentences, keeping the delimiters.
+        # This handles various sentence-ending punctuations in Japanese.
+        sentences = [s for s in re.split(r'([。！？\n])', text) if s]
+
+        # Group sentences with their delimiters
+        full_sentences = []
+        temp_sentence = ""
+        for part in sentences:
+            temp_sentence += part
+            if part in '。！？\n':
+                full_sentences.append(temp_sentence)
+                temp_sentence = ""
+        if temp_sentence: # Add any remaining part
+            full_sentences.append(temp_sentence)
+
+        all_tokens = []
+        for sentence in full_sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+
+            # Call the analysis function for each sentence
+            analysis_result = analyze_text_for_pos(sentence, model)
+            if analysis_result and analysis_result.get("tokens"):
+                all_tokens.extend(analysis_result["tokens"])
+
+        if not all_tokens:
+             # Fallback for cases where analysis returns nothing
              return jsonify({"text": text, "tokens": [{"word": text, "furigana": "", "pos": "その他"}]})
-        return jsonify(analysis_result)
+
+        return jsonify({"text": text, "tokens": all_tokens})
     except Exception as e:
+        # It's helpful to log the exception for debugging
+        print(f"Error in /analyze endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/evaluate', methods=['POST'])
