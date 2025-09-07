@@ -247,12 +247,16 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
-    async function analyzeSentence(sentenceElement, sentenceText, fullOriginalText) {
-        // Prevent re-analysis
+    async function analyzeSentence(sentenceElement, sentenceText, fullOriginalText, buttonContainer) {
+        // Prevent re-analysis if already analyzed or in progress
         if (sentenceElement.dataset.analyzed) return;
-        sentenceElement.dataset.analyzed = 'true';
-        sentenceElement.style.cursor = 'default';
-        sentenceElement.textContent = '分析中...';
+        sentenceElement.dataset.analyzed = 'true'; // Mark as in-progress
+        sentenceElement.classList.add('is-analyzing');
+
+        const loadingIndicator = document.createElement('span');
+        loadingIndicator.className = 'loading-indicator';
+        loadingIndicator.textContent = '分析中...';
+        buttonContainer.appendChild(loadingIndicator);
 
         try {
             const response = await fetch('/analyze', {
@@ -263,10 +267,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            // Clear the "分析中..." text
-            sentenceElement.innerHTML = '';
+            // Analysis successful, now update the UI
+            sentenceElement.innerHTML = ''; // Clear original sentence text
+            sentenceElement.style.cursor = 'default';
 
-            // Render the tokens
             data.tokens.forEach(word => {
                 const wordSpan = document.createElement('span');
                 wordSpan.classList.add('pos-token', `pos-${word.pos}`);
@@ -288,44 +292,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordSpan.addEventListener('click', (event) => {
                     event.stopPropagation();
                     const surfaceWord = word.word_tokens.map(t => t.surface).join('');
-                    // Pass the original full sentence context to the word card
                     showWordCard({ word: surfaceWord }, fullOriginalText);
                 });
                 sentenceElement.appendChild(wordSpan);
             });
-             // Add a space after the sentence for separation
-            sentenceElement.appendChild(document.createTextNode(' '));
+            sentenceElement.appendChild(document.createTextNode(' ')); // Add a space
 
         } catch (error) {
             console.error("Error fetching analysis for sentence:", error);
-            sentenceElement.textContent = sentenceText; // Restore original text on error
-            sentenceElement.style.color = 'red';
+            sentenceElement.style.color = 'red'; // Indicate error on the sentence itself
             delete sentenceElement.dataset.analyzed; // Allow re-trying
+        } finally {
+            // Always remove the loading indicator and the analyzing class
+            buttonContainer.querySelector('.loading-indicator')?.remove();
+            sentenceElement.classList.remove('is-analyzing');
         }
     }
 
     function handleAnalysisClick(text, textElement, button) {
-        // Hide the button that triggered this
+        const buttonContainer = button.parentElement;
         button.classList.add('is-hidden');
 
-        // Split the text into sentences. This regex is simple and might not be perfect
-        // but works for common Japanese sentence endings.
-        const sentences = text.match(/[^。！？\n]+[。！？\n]?/g) || [text];
-
-        // Clear the original text container
+        const sentences = text.split(/(?<=[。！？\n])/).filter(s => s.trim());
         textElement.innerHTML = '';
 
-        // Create and append a clickable span for each sentence
         sentences.forEach(sentenceStr => {
             const sentenceSpan = document.createElement('span');
             sentenceSpan.textContent = sentenceStr;
             sentenceSpan.classList.add('clickable-sentence');
             sentenceSpan.style.cursor = 'pointer';
 
-            // Add a one-time click listener to analyze the sentence
             sentenceSpan.addEventListener('click', () => {
-                analyzeSentence(sentenceSpan, sentenceStr.trim(), text);
-            }, { once: true });
+                analyzeSentence(sentenceSpan, sentenceStr.trim(), text, buttonContainer);
+            });
 
             textElement.appendChild(sentenceSpan);
         });
