@@ -247,20 +247,30 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
-    async function handleAnalysisClick(text, textElement, button) {
-        button.disabled = true;
-        button.textContent = '分析中...';
+    async function analyzeSentence(sentenceElement, sentenceText, fullOriginalText, buttonContainer) {
+        // Prevent re-analysis if already analyzed or in progress
+        if (sentenceElement.dataset.analyzed) return;
+        sentenceElement.dataset.analyzed = 'true'; // Mark as in-progress
+        sentenceElement.classList.add('is-analyzing');
+
+        const loadingIndicator = document.createElement('span');
+        loadingIndicator.className = 'loading-indicator';
+        loadingIndicator.textContent = '分析中...';
+        buttonContainer.appendChild(loadingIndicator);
+
         try {
             const response = await fetch('/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, model: getModelFor('analysis') })
+                body: JSON.stringify({ text: sentenceText, model: getModelFor('analysis') })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            // Re-render the textElement with tokens
-            textElement.innerHTML = ''; // Clear the plain text
+            // Analysis successful, now update the UI
+            sentenceElement.innerHTML = ''; // Clear original sentence text
+            sentenceElement.style.cursor = 'default';
+
             data.tokens.forEach(word => {
                 const wordSpan = document.createElement('span');
                 wordSpan.classList.add('pos-token', `pos-${word.pos}`);
@@ -282,17 +292,42 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordSpan.addEventListener('click', (event) => {
                     event.stopPropagation();
                     const surfaceWord = word.word_tokens.map(t => t.surface).join('');
-                    showWordCard({ word: surfaceWord }, text);
+                    showWordCard({ word: surfaceWord }, fullOriginalText);
                 });
-
-                textElement.appendChild(wordSpan);
+                sentenceElement.appendChild(wordSpan);
             });
-            button.classList.add('is-hidden'); // Hide button after analysis
+            sentenceElement.appendChild(document.createTextNode(' ')); // Add a space
+
         } catch (error) {
-            console.error("Error fetching analysis:", error);
-            button.disabled = false;
-            button.textContent = '分析';
+            console.error("Error fetching analysis for sentence:", error);
+            sentenceElement.style.color = 'red'; // Indicate error on the sentence itself
+            delete sentenceElement.dataset.analyzed; // Allow re-trying
+        } finally {
+            // Always remove the loading indicator and the analyzing class
+            buttonContainer.querySelector('.loading-indicator')?.remove();
+            sentenceElement.classList.remove('is-analyzing');
         }
+    }
+
+    function handleAnalysisClick(text, textElement, button) {
+        const buttonContainer = button.parentElement;
+        button.classList.add('is-hidden');
+
+        const sentences = text.split(/(?<=[。！？\n])/).filter(s => s.trim());
+        textElement.innerHTML = '';
+
+        sentences.forEach(sentenceStr => {
+            const sentenceSpan = document.createElement('span');
+            sentenceSpan.textContent = sentenceStr;
+            sentenceSpan.classList.add('clickable-sentence');
+            sentenceSpan.style.cursor = 'pointer';
+
+            sentenceSpan.addEventListener('click', () => {
+                analyzeSentence(sentenceSpan, sentenceStr.trim(), text, buttonContainer);
+            });
+
+            textElement.appendChild(sentenceSpan);
+        });
     }
 
 
