@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             realTimeTranscript.innerHTML = final_transcript_for_display + `<span class="interim-text">${interim_transcript}</span>`;
+            realTimeTranscript.scrollTop = realTimeTranscript.scrollHeight;
         };
 
         recognition.onend = async () => {

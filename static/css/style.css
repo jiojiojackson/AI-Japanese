@@ -135,6 +135,9 @@ h1 { margin: 0; font-weight: 700; }
     text-align: center;
     line-height: 1.5;
     transition: all 0.2s ease-in-out;
+    max-height: 15vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
 }
 
 #real-time-transcript:not(.is-hidden) {
