@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             realTimeTranscript.innerHTML = final_transcript_for_display + `<span class="interim-text">${interim_transcript}</span>`;
+            realTimeTranscript.scrollTop = realTimeTranscript.scrollHeight;
         };
 
         recognition.onend = async () => {
@@ -103,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopButton.classList.add('is-hidden');
             cancelButton.classList.add('is-hidden');
             realTimeTranscript.classList.add('is-hidden');
+            realTimeTranscript.innerHTML = '';
 
             if (isRecording) {
                 isRecording = false;
