@@ -247,20 +247,26 @@ document.addEventListener('DOMContentLoaded', () => {
         conversationArea.scrollTop = conversationArea.scrollHeight;
     }
 
-    async function handleAnalysisClick(text, textElement, button) {
-        button.disabled = true;
-        button.textContent = '分析中...';
+    async function analyzeSentence(sentenceElement, sentenceText, fullOriginalText) {
+        // Prevent re-analysis
+        if (sentenceElement.dataset.analyzed) return;
+        sentenceElement.dataset.analyzed = 'true';
+        sentenceElement.style.cursor = 'default';
+        sentenceElement.textContent = '分析中...';
+
         try {
             const response = await fetch('/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: text, model: getModelFor('analysis') })
+                body: JSON.stringify({ text: sentenceText, model: getModelFor('analysis') })
             });
             const data = await response.json();
             if (data.error) throw new Error(data.error);
 
-            // Re-render the textElement with tokens
-            textElement.innerHTML = ''; // Clear the plain text
+            // Clear the "分析中..." text
+            sentenceElement.innerHTML = '';
+
+            // Render the tokens
             data.tokens.forEach(word => {
                 const wordSpan = document.createElement('span');
                 wordSpan.classList.add('pos-token', `pos-${word.pos}`);
@@ -282,17 +288,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 wordSpan.addEventListener('click', (event) => {
                     event.stopPropagation();
                     const surfaceWord = word.word_tokens.map(t => t.surface).join('');
-                    showWordCard({ word: surfaceWord }, text);
+                    // Pass the original full sentence context to the word card
+                    showWordCard({ word: surfaceWord }, fullOriginalText);
                 });
-
-                textElement.appendChild(wordSpan);
+                sentenceElement.appendChild(wordSpan);
             });
-            button.classList.add('is-hidden'); // Hide button after analysis
+             // Add a space after the sentence for separation
+            sentenceElement.appendChild(document.createTextNode(' '));
+
         } catch (error) {
-            console.error("Error fetching analysis:", error);
-            button.disabled = false;
-            button.textContent = '分析';
+            console.error("Error fetching analysis for sentence:", error);
+            sentenceElement.textContent = sentenceText; // Restore original text on error
+            sentenceElement.style.color = 'red';
+            delete sentenceElement.dataset.analyzed; // Allow re-trying
         }
+    }
+
+    function handleAnalysisClick(text, textElement, button) {
+        // Hide the button that triggered this
+        button.classList.add('is-hidden');
+
+        // Split the text into sentences. This regex is simple and might not be perfect
+        // but works for common Japanese sentence endings.
+        const sentences = text.match(/[^。！？\n]+[。！？\n]?/g) || [text];
+
+        // Clear the original text container
+        textElement.innerHTML = '';
+
+        // Create and append a clickable span for each sentence
+        sentences.forEach(sentenceStr => {
+            const sentenceSpan = document.createElement('span');
+            sentenceSpan.textContent = sentenceStr;
+            sentenceSpan.classList.add('clickable-sentence');
+            sentenceSpan.style.cursor = 'pointer';
+
+            // Add a one-time click listener to analyze the sentence
+            sentenceSpan.addEventListener('click', () => {
+                analyzeSentence(sentenceSpan, sentenceStr.trim(), text);
+            }, { once: true });
+
+            textElement.appendChild(sentenceSpan);
+        });
     }
 
 
