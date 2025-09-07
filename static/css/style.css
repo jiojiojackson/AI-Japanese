@@ -216,9 +216,56 @@ h1 { margin: 0; font-weight: 700; }
 #close-word-card-button{ background:rgba(15,23,36,0.06); color:var(--text-color-main) }
 
 /* Responsive adjustments */
-@media (max-width:720px){
-    .container{ padding:1rem }
-    #conversation-area{ height:56vh }
-    .brand{ gap:10px }
-    .logo{ font-size:26px }
+@media (max-width: 720px) {
+    body {
+        padding: 0;
+    }
+
+    .container {
+        padding: 1rem;
+        margin: 0;
+        border-radius: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #conversation-area {
+        height: auto;
+        flex-grow: 1; /* Allow conversation area to take up available space */
+    }
+
+    .brand {
+        gap: 10px;
+    }
+
+    .logo {
+        font-size: 26px;
+    }
+
+    h1 {
+        font-size: 1.2rem;
+    }
+
+    .subtitle {
+        font-size: 0.85rem;
+    }
+
+    .record-btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+
+    .message {
+        max-width: 95%;
+    }
+
+    .user-message {
+        margin-left: auto;
+        align-items: flex-end;
+    }
+
+    .ai-message {
+        align-items: flex-start;
+    }
 }

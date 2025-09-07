@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             stopButton.classList.add('is-hidden');
             cancelButton.classList.add('is-hidden');
             realTimeTranscript.classList.add('is-hidden');
+            realTimeTranscript.innerHTML = '';
 
             if (isRecording) {
                 isRecording = false;
