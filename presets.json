@@ -68,6 +68,30 @@
       {
         "name": "職務経歴 (Previous Work Experience)",
         "starting_prompt": "これまでの職務経歴について、簡単にご説明いただけますでしょうか。"
+      },
+      {
+        "name": "ブランド印象",
+        "starting_prompt": "ブランド、ショップのイメージはどうですか？"
+      },
+      {
+        "name": "仕事の大切なこと",
+        "starting_prompt": "お仕事で大切にされていることはありますか？"
+      },
+      {
+        "name": "強みと弱み",
+        "starting_prompt": "自身の強みと弱みはなんですか？"
+      },
+      {
+        "name": "客様への抵抗",
+        "starting_prompt": "海外のお客様への抵抗はないですか？"
+      },
+      {
+        "name": "周囲からの評価",
+        "starting_prompt": "周囲からどのような人って言われていますか？"
+      },
+      {
+        "name": "選びポイント",
+        "starting_prompt": "ダウンジャケットの選び方のポイントは何ですか？"
       }
     ]
   },
