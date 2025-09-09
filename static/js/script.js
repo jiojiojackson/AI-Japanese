@@ -1,4 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Utility Functions ---
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
     // --- DOM Elements ---
     const recordButton = document.getElementById('record-button');
     const stopButton = document.getElementById('stop-button');
@@ -79,36 +92,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
-        // Helper to detect Safari
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
         recognition = new SpeechRecognition();
         recognition.lang = 'ja-JP';
         recognition.continuous = true;
+        recognition.interimResults = true;
 
-        // Safari has a known bug with interimResults and continuous mode.
-        // Disabling interimResults for Safari is a common workaround.
-        recognition.interimResults = !isSafari;
-        if (isSafari) {
-            console.log("Safari detected. Disabling interim results for SpeechRecognition.");
-        }
-
+        // Debounce the DOM update to prevent overwhelming Safari
+        const debouncedUpdateTranscript = debounce((html) => {
+            realTimeTranscript.innerHTML = html;
+            realTimeTranscript.scrollTop = realTimeTranscript.scrollHeight;
+        }, 250);
 
         recognition.onresult = (event) => {
             let interim_transcript = '';
             let final_transcript_for_display = '';
-            finalTranscript = '';
+            finalTranscript = ''; // This will be rebuilt from the full results list
 
             for (let i = 0; i < event.results.length; ++i) {
                 if (event.results[i].isFinal) {
+                    // Accumulate the final transcript globally
                     finalTranscript += event.results[i][0].transcript;
+                    // Also build the display version
                     final_transcript_for_display += event.results[i][0].transcript;
                 } else {
                     interim_transcript += event.results[i][0].transcript;
                 }
             }
-            realTimeTranscript.innerHTML = final_transcript_for_display + `<span class="interim-text">${interim_transcript}</span>`;
-            realTimeTranscript.scrollTop = realTimeTranscript.scrollHeight;
+
+            const transcriptHTML = final_transcript_for_display + `<span class="interim-text">${interim_transcript}</span>`;
+            debouncedUpdateTranscript(transcriptHTML);
         };
 
         recognition.onend = async () => {
