@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const debouncedUpdateTranscript = debounce((html) => {
             realTimeTranscript.innerHTML = html;
             realTimeTranscript.scrollTop = realTimeTranscript.scrollHeight;
-        }, 250);
+        }, 100);
 
         recognition.onresult = (event) => {
             let interim_transcript = '';
