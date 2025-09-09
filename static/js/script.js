@@ -79,10 +79,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Speech Recognition Setup ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
+        // Helper to detect Safari
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
         recognition = new SpeechRecognition();
         recognition.lang = 'ja-JP';
         recognition.continuous = true;
-        recognition.interimResults = true;
+
+        // Safari has a known bug with interimResults and continuous mode.
+        // Disabling interimResults for Safari is a common workaround.
+        recognition.interimResults = !isSafari;
+        if (isSafari) {
+            console.log("Safari detected. Disabling interim results for SpeechRecognition.");
+        }
+
 
         recognition.onresult = (event) => {
             let interim_transcript = '';
