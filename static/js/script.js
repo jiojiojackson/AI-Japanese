@@ -48,7 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let messages = [];
     let lastAiQuestion = "";
     let finalTranscript = "";
-    let audioCache = {};
+    let masterAudioElement = null; // Reusable Audio element
+    let currentPlayingButton = null; // Button associated with the current sound
+    let audioCache = {}; // We'll still cache the URLs
     let messageIdCounter = 0;
     let currentWordToPronounce = '';
     let presets = [];
@@ -459,26 +461,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function playAiAudio(text, button) {
-        if (!text) return;
+    if (!text || !masterAudioElement) return;
+
+    // If a sound is already playing, stop it and reset its button
+    if (!masterAudioElement.paused) {
+        masterAudioElement.pause();
+        masterAudioElement.currentTime = 0;
+        if (currentPlayingButton) {
+            currentPlayingButton.disabled = false;
+            currentPlayingButton.textContent = '▶️ 再生';
+        }
+    }
+
+    // If the clicked button was the one playing, we just stop it.
+    if (currentPlayingButton === button) {
+        currentPlayingButton = null;
+        return;
+    }
+
         const selectedEngine = document.querySelector('input[name="tts-engine"]:checked').value;
         const selectedVoice = voiceSelect.value;
         const cacheKey = `${selectedEngine}-${selectedVoice}-${text}`;
 
+    // --- Update button UI ---
+    button.disabled = true;
+    button.textContent = '🔊 再生中...';
+    currentPlayingButton = button;
+
+    masterAudioElement.onended = () => {
+        button.disabled = false;
+        button.textContent = '▶️ 再生';
+        currentPlayingButton = null;
+    };
+    masterAudioElement.onerror = () => {
+        console.error("Error playing audio.");
+        button.disabled = false;
+        button.textContent = '▶️ 再生';
+        currentPlayingButton = null;
+    };
+
+
         if (audioCache[cacheKey]) {
-            const audio = new Audio(audioCache[cacheKey]);
-            button.disabled = true;
-            button.textContent = '🔊 再生中...';
-            audio.play();
-            audio.onended = () => {
-                button.disabled = false;
-                button.textContent = '▶️ 再生';
-            };
+        masterAudioElement.src = audioCache[cacheKey];
+        masterAudioElement.play();
             return;
         }
 
         try {
-            button.disabled = true;
-            button.textContent = '🔊 再生中...';
             const response = await fetch('/synthesize-speech', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -493,15 +522,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const audioBlob = await response.blob();
             const audioUrl = URL.createObjectURL(audioBlob);
             audioCache[cacheKey] = audioUrl;
-            const audio = new Audio(audioUrl);
-            audio.play();
-            audio.onended = () => {
-                button.disabled = false;
-                button.textContent = '▶️ 再生';
-            };
+        masterAudioElement.src = audioUrl;
+        masterAudioElement.play();
+
         } catch (error) {
+        console.error("Error fetching or playing audio:", error);
+        // Reset button on error
             button.disabled = false;
             button.textContent = '▶️ 再生';
+        currentPlayingButton = null;
         }
     }
 
@@ -550,6 +579,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function startConversation() {
+        // --- This is the key part for mobile audio unlock ---
+        if (!masterAudioElement) {
+            masterAudioElement = new Audio();
+            // Optional: Play and immediately pause a silent sound to unlock on iOS
+            // masterAudioElement.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+            // masterAudioElement.play().then(() => masterAudioElement.pause()).catch(() => {});
+        }
+
         const selectedPersonaName = personaSelect.value;
         const selectedTopicName = topicSelect.value;
 
