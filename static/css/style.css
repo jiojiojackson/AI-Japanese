@@ -19,6 +19,10 @@
 }
 
 
+html {
+    height: 100%;
+}
+
 body {
     font-family: var(--font-family-sans);
     background: linear-gradient(180deg, #f7fafc 0%, var(--background-color) 100%);
@@ -26,6 +30,7 @@ body {
     margin: 0;
     padding: 1rem;
     line-height: 1.6;
+    height: 100%;
 }
 
 .container {
@@ -228,14 +233,16 @@ h1 { margin: 0; font-weight: 700; }
         padding: 1rem;
         margin: 0;
         border-radius: 0;
-        height: 100vh;
+        height: 100%;
         display: flex;
         flex-direction: column;
+        box-sizing: border-box;
     }
 
     #conversation-area {
         height: auto;
         flex-grow: 1; /* Allow conversation area to take up available space */
+        overflow-y: auto; /* Ensure scrolling within the flex item */
     }
 
     .brand {
@@ -270,5 +277,35 @@ h1 { margin: 0; font-weight: 700; }
 
     .ai-message {
         align-items: flex-start;
+    }
+
+    .modal-content {
+        width: 90%;
+        padding: 1.25rem;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+
+    .user-controls-buttons {
+        flex-wrap: wrap;
+    }
+
+    /* Make modals more responsive */
+    .modal-content h2 {
+        font-size: 1.25rem;
+    }
+
+    .setting-item label {
+        font-size: 0.9rem;
+    }
+
+    .word-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    #word-card-title {
+        font-size: 1.4rem;
     }
 }
