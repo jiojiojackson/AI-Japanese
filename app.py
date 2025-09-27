@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 import struct
 from io import BytesIO
 import groq
-import google.generativeai as genai
-from google.generativeai import types
+import google.generativeai as genai_text
+from google import genai
+from google.genai import types
 from gtts import gTTS
 import requests
 import urllib.parse
@@ -55,7 +56,7 @@ def inject_auth_flags():
 # In a real application, you would get the API key from a secure source
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
 if os.environ.get("GEMINI_API_KEY"):
-    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    genai_text.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 POS_PROMPT = """
@@ -112,7 +113,7 @@ def generate_ai_response(model: str, messages: list, json_output: bool = False) 
         if not os.environ.get("GEMINI_API_KEY"):
             raise ValueError("GEMINI_API_KEY not set for Gemini model")
 
-        gemini_model = genai.GenerativeModel(model)
+        gemini_model = genai_text.GenerativeModel(model)
 
         system_instruction = None
         if messages and messages[0]['role'] == 'system':
