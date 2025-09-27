@@ -6,13 +6,33 @@
     <title>日本語会話チューター (Japanese Speaking Tutor)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="description" content="AI驱动的日语口语练习应用，通过对话提升日语水平">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
 
     <div class="container">
         <header class="app-header">
+            <div class="header-controls">
+                <button id="open-settings-button" class="settings-btn" aria-label="設定を開く" title="設定">
+                    <span aria-hidden="true">⚙️</span>
+                </button>
+                {% if app_password_set %}
+                    {% if logged_in %}
+                        <form method="post" action="{{ url_for('logout') }}" style="display:inline">
+                            <button type="submit" class="settings-btn" title="ログアウト">
+                                <span aria-hidden="true">🚪</span>
+                            </button>
+                        </form>
+                    {% else %}
+                        <a class="settings-btn" href="{{ url_for('login') }}" title="ログイン">
+                            <span aria-hidden="true">🔐</span>
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
             <div class="brand">
                 <div class="logo" aria-hidden="true">🗣️</div>
                 <div>
@@ -20,41 +40,34 @@
                     <p class="subtitle">AIと日本語で会話して、スピーキングを練習しましょう。</p>
                 </div>
             </div>
-            <div class="header-controls">
-                <button id="open-settings-button" class="settings-btn" aria-label="設定">⚙️</button>
-                {% if app_password_set %}
-                    {% if logged_in %}
-                        <form method="post" action="{{ url_for('logout') }}" style="display:inline">
-                            <button type="submit" class="settings-btn">登出</button>
-                        </form>
-                    {% else %}
-                        <a class="settings-btn" href="{{ url_for('login') }}">登录</a>
-                    {% endif %}
-                {% endif %}
-            </div>
         </header>
 
         <div class="settings-container" aria-hidden="true">
             <div class="settings-area">
-                <label for="tts-engine-select">声のエンジン:</label>
-                <div id="tts-engine-select">
-                    <input type="radio" id="engine-gemini" name="tts-engine" value="gemini" checked>
-                    <label for="engine-gemini">高品質 (Gemini)</label>
-                    <input type="radio" id="engine-gtts" name="tts-engine" value="gtts">
-                    <label for="engine-gtts">標準 (gTTS)</label>
+                <label for="tts-engine-select">🎵 声のエンジン:</label>
+                <div id="tts-engine-select" role="radiogroup" aria-labelledby="tts-engine-label">
+                    <label for="engine-gemini">
+                        <input type="radio" id="engine-gemini" name="tts-engine" value="gemini" checked>
+                        <span>✨ 高品質 (Gemini)</span>
+                    </label>
+                    <label for="engine-gtts">
+                        <input type="radio" id="engine-gtts" name="tts-engine" value="gtts">
+                        <span>🔊 標準 (gTTS)</span>
+                    </label>
                 </div>
             </div>
             <div class="settings-area" id="gemini-voice-settings">
-                <label for="voice-select">AIの音色 (Gemini):</label>
-                <select name="voices" id="voice-select">
-                    <option value="zephyr">Zephyr</option>
-                    <option value="achernar">Achernar</option>
-                    <option value="algenib">Algenib</option>
-                    <option value="gacrux">Gacrux</option>
-                    <option value="kore">Kore</option>
-                    <option value="puck">Puck</option>
-                    <option value="sulafat">Sulafat</option>
+                <label for="voice-select">🎭 AIの音色 (Gemini):</label>
+                <select name="voices" id="voice-select" aria-describedby="voice-help">
+                    <option value="zephyr">Zephyr - 自然な声</option>
+                    <option value="achernar">Achernar - 明るい声</option>
+                    <option value="algenib">Algenib - 落ち着いた声</option>
+                    <option value="gacrux">Gacrux - 温かい声</option>
+                    <option value="kore">Kore - クリアな声</option>
+                    <option value="puck">Puck - 活発な声</option>
+                    <option value="sulafat">Sulafat - 優しい声</option>
                 </select>
+                <small id="voice-help" class="help-text">音声の特徴を選択してください</small>
             </div>
         </div>
 
@@ -63,11 +76,20 @@
         </main>
 
         <div id="user-controls" class="is-hidden">
-            <p id="real-time-transcript" class="is-hidden" aria-live="polite"></p>
+            <div id="real-time-transcript" class="is-hidden" aria-live="polite" aria-label="リアルタイム音声認識結果"></div>
             <div class="user-controls-buttons">
-                <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音開始">🎤 録音開始</button>
-                <button id="stop-button" class="record-btn is-hidden" aria-label="録音停止">⏹️ 録音停止</button>
-                <button id="cancel-button" class="record-btn is-hidden" aria-label="録音キャンセル">❌ キャンセル</button>
+                <button id="record-button" class="record-btn" aria-pressed="false" aria-label="録音を開始する" title="録音開始">
+                    <span aria-hidden="true">🎤</span>
+                    <span>録音開始</span>
+                </button>
+                <button id="stop-button" class="record-btn is-hidden" aria-label="録音を停止する" title="録音停止">
+                    <span aria-hidden="true">⏹️</span>
+                    <span>録音停止</span>
+                </button>
+                <button id="cancel-button" class="record-btn is-hidden" aria-label="録音をキャンセルする" title="キャンセル">
+                    <span aria-hidden="true">❌</span>
+                    <span>キャンセル</span>
+                </button>
             </div>
         </div>
 
@@ -76,23 +98,29 @@
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
     <!-- Preset Selection Modal -->
-    <div id="preset-modal" class="modal-overlay">
+    <div id="preset-modal" class="modal-overlay" role="dialog" aria-labelledby="preset-modal-title" aria-modal="true">
         <div class="modal-content">
-            <h2>新しい会話を始める</h2>
+            <h2 id="preset-modal-title">🚀 新しい会話を始める</h2>
             <p>まず、AIのキャラクターと話したいトピックを選んでください。</p>
             <div class="setting-item">
-                <label for="persona-select">キャラクター:</label>
-                <select id="persona-select">
+                <label for="persona-select">👤 キャラクター:</label>
+                <select id="persona-select" aria-describedby="persona-help">
                     <!-- Options will be populated by JS -->
                 </select>
+                <small id="persona-help" class="help-text">会話相手のキャラクターを選択</small>
             </div>
             <div class="setting-item">
-                <label for="topic-select">トピック:</label>
-                <select id="topic-select">
+                <label for="topic-select">💭 トピック:</label>
+                <select id="topic-select" aria-describedby="topic-help">
                     <!-- Options will be populated by JS -->
                 </select>
+                <small id="topic-help" class="help-text">練習したい会話のテーマを選択</small>
             </div>
-            <button id="start-chat-button">会話を始める</button>
+            <button id="start-chat-button" aria-describedby="start-help">
+                <span aria-hidden="true">🎯</span>
+                会話を始める
+            </button>
+            <small id="start-help" class="help-text">選択した設定で会話を開始します</small>
         </div>
     </div>
 

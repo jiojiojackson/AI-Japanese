@@ -126,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         recognition.onend = async () => {
             recordButton.classList.remove('is-hidden');
             stopButton.classList.add('is-hidden');
+            stopButton.classList.remove('recording');
             cancelButton.classList.add('is-hidden');
             realTimeTranscript.classList.add('is-hidden');
             realTimeTranscript.innerHTML = '';
@@ -135,6 +136,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const rawUserAnswer = finalTranscript.trim();
 
                 if (rawUserAnswer) {
+                    // Show processing state
+                    recordButton.disabled = true;
+                    recordButton.innerHTML = '<span aria-hidden="true">⏳</span><span>処理中...</span>';
+                    
                     const messageId = `user-message-${messageIdCounter++}`;
                     const punctuatedAnswer = await punctuateText(rawUserAnswer);
 
@@ -142,6 +147,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     messages.push({ role: 'user', content: punctuatedAnswer });
                     getAiResponse();
                     getEvaluation(lastAiQuestion, punctuatedAnswer, messageId);
+                    
+                    // Reset button state
+                    setTimeout(() => {
+                        recordButton.disabled = false;
+                        recordButton.innerHTML = '<span aria-hidden="true">🎤</span><span>録音開始</span>';
+                    }, 1000);
+                } else {
+                    // Show feedback for empty recording
+                    showTemporaryMessage('音声が検出されませんでした。もう一度お試しください。', 'warning');
                 }
             }
         };
@@ -173,6 +187,32 @@ document.addEventListener('DOMContentLoaded', () => {
     recordButton.addEventListener('click', startRecording);
     stopButton.addEventListener('click', stopRecording);
     cancelButton.addEventListener('click', cancelRecording);
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        // Space bar to start/stop recording (when not in input fields)
+        if (e.code === 'Space' && !e.target.matches('input, textarea, select')) {
+            e.preventDefault();
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        }
+        
+        // Escape to cancel recording or close modals
+        if (e.code === 'Escape') {
+            if (isRecording) {
+                cancelRecording();
+            } else if (!settingsModal.classList.contains('is-hidden')) {
+                settingsModal.classList.add('is-hidden');
+            } else if (!wordCardModal.classList.contains('is-hidden')) {
+                wordCardModal.classList.add('is-hidden');
+            } else if (!presetModal.classList.contains('is-hidden')) {
+                // Don't allow closing preset modal with escape as it's required
+            }
+        }
+    });
 
     ttsEngineSelect.addEventListener('change', (e) => {
         geminiVoiceSettings.style.display = (e.target.value === 'gemini') ? 'block' : 'none';
@@ -189,16 +229,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Functions ---
+    function showTemporaryMessage(message, type = 'info', duration = 3000) {
+        const messageEl = document.createElement('div');
+        messageEl.className = `status-indicator ${type}`;
+        messageEl.textContent = message;
+        messageEl.style.position = 'fixed';
+        messageEl.style.top = '20px';
+        messageEl.style.right = '20px';
+        messageEl.style.zIndex = '9999';
+        messageEl.style.animation = 'slideIn 0.3s ease-out';
+        
+        document.body.appendChild(messageEl);
+        
+        setTimeout(() => {
+            messageEl.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => {
+                if (messageEl.parentNode) {
+                    messageEl.parentNode.removeChild(messageEl);
+                }
+            }, 300);
+        }, duration);
+    }
     function startRecording() {
         if (recognition && !isRecording) {
             finalTranscript = "";
             realTimeTranscript.textContent = "聞き取り中...";
             realTimeTranscript.classList.remove('is-hidden');
             isRecording = true;
-            recognition.start();
+            
+            // Add visual feedback
             recordButton.classList.add('is-hidden');
             stopButton.classList.remove('is-hidden');
+            stopButton.classList.add('recording');
             cancelButton.classList.remove('is-hidden');
+            
+            // Add haptic feedback if available
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            recognition.start();
         }
     }
 
@@ -568,7 +638,9 @@ document.addEventListener('DOMContentLoaded', () => {
             messages.push({ role: 'assistant', content: data.text });
             addMessageToConversation('ai', data.text);
         } catch (error) {
-            addMessageToConversation('ai', 'すみません、エラーが発生しました。');
+            console.error('AI Response Error:', error);
+            addMessageToConversation('ai', 'すみません、エラーが発生しました。もう一度お試しください。');
+            showTemporaryMessage('AI応答の取得に失敗しました', 'error');
         }
     }
 
@@ -597,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error getting evaluation:', error);
+            showTemporaryMessage('評価の取得に失敗しました', 'error');
         }
     }
 
