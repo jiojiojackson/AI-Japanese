@@ -54,7 +54,58 @@ def inject_auth_flags():
 
 # In a real application, you would get the API key from a secure source
 groq_client = groq.Groq(api_key=os.environ.get("GROQ_API_KEY"))
+gemini_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 DEFAULT_MODEL = "openai/gpt-oss-120b"
+
+def call_model(messages, model, response_format=None):
+    """
+    Universal function to call different AI models (Groq or Gemini).
+    """
+    if model == "gemini-2.5-flash":
+        # Convert messages to Gemini format
+        gemini_contents = []
+        system_message = None
+        
+        # Extract system message if present
+        for msg in messages:
+            if msg["role"] == "system":
+                system_message = msg["content"]
+                break
+        
+        # Convert messages to Gemini format
+        for msg in messages:
+            if msg["role"] == "system":
+                continue  # Skip system messages, we'll handle them separately
+            elif msg["role"] == "user":
+                content = msg["content"]
+                # If there was a system message, prepend it to the first user message
+                if system_message and len(gemini_contents) == 0:
+                    content = f"{system_message}\n\n{content}"
+                gemini_contents.append(types.Content(role="user", parts=[types.Part.from_text(text=content)]))
+            elif msg["role"] == "assistant":
+                gemini_contents.append(types.Content(role="model", parts=[types.Part.from_text(text=msg["content"])]))
+        
+        # Configure response format for JSON if needed
+        config = None
+        if response_format and response_format.get("type") == "json_object":
+            config = types.GenerateContentConfig(
+                response_mime_type="application/json"
+            )
+        
+        response = gemini_client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=gemini_contents,
+            config=config
+        )
+        return response.text
+    else:
+        # Use Groq for other models
+        kwargs = {"messages": messages, "model": model}
+        if response_format:
+            kwargs["response_format"] = response_format
+        
+        completion = groq_client.chat.completions.create(**kwargs)
+        return completion.choices[0].message.content
 
 POS_PROMPT = """
 You are a Japanese morphological analysis expert. Your task is to process a Japanese sentence and return a structured JSON object representing the analysis.
@@ -104,15 +155,13 @@ Example JSON Output:
 
 def analyze_text_for_pos(text_to_analyze: str, model: str) -> dict:
     """Helper function to run POS analysis on a string."""
-    pos_completion = groq_client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": POS_PROMPT},
-            {"role": "user", "content": text_to_analyze}
-        ],
-        model=model,
-        response_format={"type": "json_object"},
-    )
-    pos_data = json.loads(pos_completion.choices[0].message.content)
+    messages = [
+        {"role": "system", "content": POS_PROMPT},
+        {"role": "user", "content": text_to_analyze}
+    ]
+    
+    response_content = call_model(messages, model, response_format={"type": "json_object"})
+    pos_data = json.loads(response_content)
     analyzed_tokens = pos_data.get("result", [])
     return {"text": text_to_analyze, "tokens": analyzed_tokens}
 
@@ -174,21 +223,15 @@ def chat():
 
     try:
         # Step 1: Get the initial conversational response
-        initial_completion = groq_client.chat.completions.create(
-            messages=messages, model=model
-        )
-        raw_ai_text = initial_completion.choices[0].message.content
+        raw_ai_text = call_model(messages, model)
 
         # Step 2: Clean the response using a second AI call
         cleanup_prompt = "Reformat the following text into a simple, natural paragraph of Japanese. Remove markdown (like `**`, `*`, `1.`, `-`), fix repeated punctuation, and ensure it reads like a natural spoken response. Output only the cleaned text."
-        cleanup_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": cleanup_prompt},
-                {"role": "user", "content": raw_ai_text}
-            ],
-            model=model,
-        )
-        cleaned_ai_text = cleanup_completion.choices[0].message.content.strip()
+        cleanup_messages = [
+            {"role": "system", "content": cleanup_prompt},
+            {"role": "user", "content": raw_ai_text}
+        ]
+        cleaned_ai_text = call_model(cleanup_messages, model).strip()
 
         return jsonify({"text": cleaned_ai_text})
 
@@ -238,15 +281,13 @@ The JSON object must have four keys: "score", "error_html", "corrected_sentence"
 """
 
     try:
-        chat_completion = groq_client.chat.completions.create(
-            model=model,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"My question to the student was: '{ai_question}'. The student's response was: '{user_answer}'. Please evaluate it."}
-            ]
-        )
-        evaluation_data = json.loads(chat_completion.choices[0].message.content)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"My question to the student was: '{ai_question}'. The student's response was: '{user_answer}'. Please evaluate it."}
+        ]
+        
+        response_content = call_model(messages, model, response_format={"type": "json_object"})
+        evaluation_data = json.loads(response_content)
         return jsonify(evaluation_data)
 
     except Exception as e:
@@ -373,15 +414,13 @@ Example for an inflected verb like "食べました":
     user_prompt = f"Please explain the word '{word}' as it appears in the sentence: '{sentence}'"
 
     try:
-        chat_completion = groq_client.chat.completions.create(
-            model=model,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        explanation_data = json.loads(chat_completion.choices[0].message.content)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        response_content = call_model(messages, model, response_format={"type": "json_object"})
+        explanation_data = json.loads(response_content)
 
         dictionary_form = explanation_data.get("dictionary_form")
         if dictionary_form:
@@ -417,14 +456,12 @@ def translate():
     try:
         system_prompt = "You are a helpful translation assistant. Translate the following Japanese text to Chinese. Return only the translated text, with no other explanations or surrounding text."
 
-        chat_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": text}
-            ],
-            model=model,
-        )
-        translated_text = chat_completion.choices[0].message.content
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": text}
+        ]
+        
+        translated_text = call_model(messages, model)
         return jsonify({"translated_text": translated_text})
 
     except Exception as e:
@@ -445,14 +482,12 @@ def punctuate():
     try:
         system_prompt = "You are a helpful assistant. Add appropriate Japanese punctuation (like 、 and 。) to the following text. Do not change the words. Only return the punctuated text, with no other explanations or surrounding text."
 
-        chat_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": raw_text}
-            ],
-            model=model,
-        )
-        punctuated_text = chat_completion.choices[0].message.content
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": raw_text}
+        ]
+        
+        punctuated_text = call_model(messages, model)
         return jsonify({"punctuated_text": punctuated_text})
 
     except Exception as e:
