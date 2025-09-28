@@ -15,10 +15,21 @@
 
 后端主要调用 / 使用：
 - groq (groq-client)：用于对话、评估、切分与解释等 AI 请求。
-- google-genai：用作 Gemini TTS 合成（可选，高质量）。
+- google-genai：用作 Gemini TTS 合成（可选，高质量）以及 Gemini 2.5 Flash 模型调用。
 - gTTS：作为简单的日语 TTS 备选。
 - Flask：Web 框架。
 - 浏览器端：使用 Web Speech API 做语音识别（交互在前端实现）。
+
+## 新功能：Gemini 2.5 Flash 模型支持
+现在支持在设置中选择 Gemini 2.5 Flash 作为 AI 模型，适用于：
+- 会话模型 (Conversation Model)
+- 分析模型 (Analysis Model) 
+- 翻译模型
+- 评价模型
+- 单词解释模型
+- 书式设定模型 (句读点)
+
+使用 Gemini 2.5 Flash 需要配置 `GEMINI_API_KEY` 环境变量。
 
 本地运行（开发）
 1. 创建虚拟环境并安装依赖：
@@ -65,9 +76,20 @@ Main features:
 
 Backend tools and libraries:
 - groq (AI completions for chat, evaluate, explain-word, punctuate, translate)
-- google-genai (Gemini TTS streaming)
+- google-genai (Gemini TTS streaming + Gemini 2.5 Flash model support)
 - gTTS (simple MP3 generation)
 - Flask (web server)
+
+## New Feature: Gemini 2.5 Flash Model Support
+The app now supports Gemini 2.5 Flash as an AI model option in settings for:
+- Conversation Model
+- Analysis Model
+- Translation Model
+- Evaluation Model
+- Word Explanation Model
+- Formatting Model (punctuation)
+
+Requires `GEMINI_API_KEY` environment variable to be set.
 
 Run locally:
 1. python -m venv venv
